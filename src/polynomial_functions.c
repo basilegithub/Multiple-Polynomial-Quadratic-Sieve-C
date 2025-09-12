@@ -101,7 +101,8 @@ void create_polynomial(mpz_t a, dyn_array* sol_needed, dyn_array* second_part, d
         }
     }
     for (unsigned long i = 0 ; i < selected.len ; i++) mpz_clear(*(selected.start+i));
-    realloc(selected.start,0);
+    free(selected.start);
+    selected.start = NULL;
     mpz_clears(tmp,tmp2,NULL);
     mpf_clears(bound,tmpf,tmpf2,NULL);
 }

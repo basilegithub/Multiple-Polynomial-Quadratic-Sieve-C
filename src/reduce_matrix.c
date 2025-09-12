@@ -566,6 +566,9 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
         tmp++;
     }*/
 
-    realloc(sorted.start,0);
-    realloc(weights.start,0);
+    free(sorted.start);
+    sorted.start = NULL;
+
+    free(weights.start);
+    weights.start = NULL;
 }
