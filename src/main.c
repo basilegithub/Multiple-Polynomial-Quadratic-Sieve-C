@@ -44,54 +44,28 @@ void count(dyn_array_classic matrix, unsigned long limit,unsigned long dim)
     mpz_clears(tmp,tmp2,NULL);
 }
 
-int main()
+void initialize_1(gmp_randstate_t state, mpf_t ln10, mpf_t ln2, mpf_t e)
 {
-    int flag_parallel_sieve = 1;
+    mpz_t n, b;
+    mpz_init_set_ui(n, 3);
+    mpz_init_set_ui(b, 82939);
+    mpz_powm_ui(n, n, rand()*23%103, b);
+    gmp_randseed(state, n);
 
-    printf("program started\n\n");
-    srand(time(NULL));
-    mpz_t N,n,b,tmp,tmp2;
-    mpz_init_set_ui(n,3);
-    mpz_init_set_ui(b,82939);
-    mpz_powm_ui(n,n,rand()*23%103,b);
-    gmp_randstate_t state;
-    gmp_randinit_mt(state);
-    gmp_randseed(state,n);
-    mpf_t ln10,ln2,e;
     mpf_init_set_d(ln10,2.302585092994046);
     mpf_init_set_d(ln2,0.6931471805599453);
+
+    compute_e(e);
+
     mpz_clear(n);
     mpz_clear(b);
-    mpf_init(e);
-    compute_e(e);
-    mpz_init(tmp);
-    mpz_init(tmp2);
-    mpf_t bound,tmpf,tmpf2;
-    char number[100];
-    printf("enter the number you wish to factor : ");
-    fgets(number,100,stdin);
-    mpf_init(bound);
-    mpf_set_prec(bound,256);
-    mpf_set_str(bound,number,10);
-    mpf_init(tmpf);
-    mpf_init(tmpf2);
-    mpz_init_set_ui(b,10000);
-    mpz_init(n);
+}
 
-    mpz_init_set_str(N,number,10);
-    dyn_array_classic tmp_primes;
-    init_classic(&tmp_primes);
-    smoothB(b,&tmp_primes);
-    unsigned long best_mult = 1;
-    mpf_t best_time, work, time2,time1;
-    mpf_init_set_si(best_time,-1);
-    mpf_init(work);
-    mpf_init(time2);
-    mpf_init(time1);
-    mpf_set_prec(tmpf,10);
-    mpf_set_prec(tmpf2,10);
-    mpf_set_prec(work,10);
+unsigned long compute_best_mult(mpf_t best_time, mpf_t work, mpf_t time1, mpf_t time2, mpf_t e, mpf_t ln2, mpf_t tmpf, mpf_t tmpf2, mpz_t N, mpz_t n, mpz_t tmp, mpz_t tmp2, dyn_array_classic tmp_primes)
+{
     int res;
+    unsigned long best_mult;
+
     for (unsigned long k = 1 ; k < 40 ; k++)
     {
         mpz_mul_ui(n,N,k);
@@ -160,9 +134,12 @@ int main()
             best_mult = k;
         }
     }
-    mpz_mul_ui(n,N,best_mult);
 
-    mpf_set_z(bound,n);
+    return best_mult;
+}
+
+void compute_b(mpf_t bound, mpf_t e, mpf_t ln2, mpf_t tmpf, mpf_t tmpf2, mpz_t b)
+{
     natural_log(tmpf,bound,ln2,e);
     natural_log(tmpf2,tmpf,ln2,e);
     mpf_mul(tmpf,tmpf,tmpf2);
@@ -172,19 +149,154 @@ int main()
     mpf_mul_ui(tmpf,tmpf,10);
     mpf_div_ui(tmpf,tmpf,32);
     mpz_set_f(b,tmpf);
+}
 
+void print_bits_and_digits(mpz_t n, mpz_t tmp)
+{
     mpz_set(tmp,n);
     my_int_log2(tmp);
-    mpz_add_ui(tmp,tmp,1);
-    gmp_printf("%Zd bits ; ",tmp);
+    mpz_add_ui(tmp, tmp, 1);
+    gmp_printf("%Zd bits ; ", tmp);
+
     unsigned long digits = 0;
-    mpz_set(tmp,n);
-    while (mpz_cmp_ui(tmp,0))
+    mpz_set(tmp, n);
+    while (mpz_cmp_ui(tmp, 0))
     {
-        mpz_div_ui(tmp,tmp,10);
+        mpz_div_ui(tmp, tmp, 10);
         digits++;
     }
-    printf("%lu digits\n",digits);
+    printf("%lu digits\n", digits);
+}
+
+void compute_factor_base(dyn_array_classic* primes, dyn_array* a, dyn_array_classic B, mpz_t* prod_primes, mpz_t n, mpz_t tmp2, gmp_randstate_t state)
+{
+    mpz_init_set_ui(*prod_primes,2);
+    for (unsigned long i = 1 ; i < B.len ; i++)
+    {
+        if (my_legendre(n,*(B.start+i)) == 1)
+        {
+            append_classic(primes,*(B.start+i));
+            mpz_set(tmp2,n);
+            sqrt_mod(tmp2,*(B.start+i),state);
+            append(a,tmp2);
+            mpz_mul_ui(*prod_primes,*prod_primes,*(B.start+i));
+        }
+        else if (!my_legendre(n,*(B.start+i)))
+        {
+            append_classic(primes,*(B.start+i));
+            mpz_set_ui(tmp2,0);
+            append(a,tmp2);
+            mpz_mul_ui(*prod_primes,*prod_primes,*(B.start+i));
+        }
+    }
+}
+
+void compute_bounds(unsigned long* bounds, dyn_array_classic primes)
+{
+    for (unsigned long i = 1 ; i < primes.len ; i++)
+    {
+        if (*(primes.start+i) >= 10 && bounds[0] == 0) bounds[0] = i;
+        else if (*(primes.start+i) >= 100 && bounds[1] == 0) bounds[1] = i;
+        else if (*(primes.start+i) >= 1000 && bounds[2] == 0) bounds[2] = i;
+        else if (*(primes.start+i) >= 3000 && bounds[3] == 0)
+        {
+            bounds[3] = i-1;
+            break;
+        }
+    }
+    if (bounds[2] != 0 && bounds[3] == 0 && primes.len-1-bounds[2] > 20)
+    {
+        bounds[3] = primes.len-1;
+    }
+}
+
+void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
+{
+    mpz_t last,last_log;
+    mpz_init_set_ui(last,2);
+    mpz_init_set_ui(last_log,1);
+    for (unsigned long i = 1 ; i < primes.len ; i++)
+    {
+        mpz_set(tmp,last);
+        mpz_mul_ui(tmp,tmp,1414213562);
+        mpz_div_ui(tmp,tmp,1000000000);
+        if (mpz_cmp_ui(tmp,*(primes.start+i)) >= 0)
+        {
+            logs[i] = mpz_get_ui(last_log);
+            continue;
+        }
+        mpz_mul_ui(tmp,last,2);
+        if (mpz_cmp_ui(tmp,*(primes.start+i)) >= 0)
+        {
+            mpz_add_ui(tmp,last_log,1);
+            logs[i] = mpz_get_ui(tmp);
+            continue;
+        }
+        while (mpz_cmp_ui(tmp,*(primes.start+i)) == -1)
+        {
+            mpz_add_ui(last_log,last_log,1);
+            mpz_mul_ui(last,last,2);
+            mpz_mul_ui(tmp,last,2);
+        }
+        logs[i] = mpz_get_ui(last_log);
+    }
+}
+
+int main()
+{
+    int flag_parallel_sieve = 1;
+
+    printf("program started\n\n");
+    srand(time(NULL));
+    mpz_t N,n,b,tmp,tmp2;
+    mpz_init_set_ui(n,3);
+    mpz_init_set_ui(b,82939);
+    mpz_powm_ui(n,n,rand()*23%103,b);
+    gmp_randstate_t state;
+    gmp_randinit_mt(state);
+    gmp_randseed(state,n);
+    mpf_t ln10,ln2,e;
+    mpf_init(e);
+    
+    initialize_1(state, ln10, ln2, e);
+
+    mpz_init(tmp);
+    mpz_init(tmp2);
+    mpf_t bound,tmpf,tmpf2;
+    char number[100];
+    printf("enter the number you wish to factor : ");
+    fgets(number,100,stdin);
+    mpf_init(bound);
+    mpf_set_prec(bound,256);
+    mpf_set_str(bound,number,10);
+    mpf_init(tmpf);
+    mpf_init(tmpf2);
+    mpz_init_set_ui(b,10000);
+    mpz_init(n);
+
+    mpz_init_set_str(N,number,10);
+    dyn_array_classic tmp_primes;
+    init_classic(&tmp_primes);
+    smoothB(b,&tmp_primes);
+    mpf_t best_time, work, time2,time1;
+    mpf_init_set_si(best_time,-1);
+    mpf_init(work);
+    mpf_init(time2);
+    mpf_init(time1);
+    mpf_set_prec(tmpf,10);
+    mpf_set_prec(tmpf2,10);
+    mpf_set_prec(work,10);
+
+    unsigned long best_mult = compute_best_mult(best_time, work, time1, time2, e, ln2, tmpf, tmpf2, N, n, tmp, tmp2, tmp_primes);
+
+    mpz_mul_ui(n,N,best_mult);
+
+    mpf_set_z(bound,n);
+
+    compute_b(bound, e, ln2, tmpf, tmpf2, b);
+
+    print_bits_and_digits(n, tmp);
+
     mpf_sub(tmpf,best_time,time1);
     myexp(tmpf,tmpf,e);
     mpf_neg(tmpf,tmpf);
@@ -212,76 +324,22 @@ int main()
     init(&a);
     append(&a,tmp2);
     mpz_t prod_primes;
-    mpz_init_set_ui(prod_primes,2);
-    for (unsigned long i = 1 ; i < B.len ; i++)
-    {
-        if (my_legendre(n,*(B.start+i)) == 1)
-        {
-            append_classic(&primes,*(B.start+i));
-            mpz_set(tmp2,n);
-            sqrt_mod(tmp2,*(B.start+i),state);
-            append(&a,tmp2);
-            mpz_mul_ui(prod_primes,prod_primes,*(B.start+i));
-        }
-        else if (!my_legendre(n,*(B.start+i)))
-        {
-            append_classic(&primes,*(B.start+i));
-            mpz_set_ui(tmp2,0);
-            append(&a,tmp2);
-            mpz_mul_ui(prod_primes,prod_primes,*(B.start+i));
-        }
-    }
+
+    compute_factor_base(&primes, &a, B, &prod_primes, n, tmp2, state);
+
     struct tm tm = *localtime(&(time_t){time(NULL)});
     printf("%d:%d:%d\n\tfactor base created : %lu primes\n",tm.tm_hour,tm.tm_min,tm.tm_sec,primes.len);
     printf("\tp_max = %lu\n",*(primes.start+primes.len-1));
+
     unsigned long bounds[4] = {0,0,0,0};
-    for (unsigned long i = 1 ; i < primes.len ; i++)
-    {
-        if (*(primes.start+i) >= 10 && bounds[0] == 0) bounds[0] = i;
-        else if (*(primes.start+i) >= 100 && bounds[1] == 0) bounds[1] = i;
-        else if (*(primes.start+i) >= 1000 && bounds[2] == 0) bounds[2] = i;
-        else if (*(primes.start+i) >= 3000 && bounds[3] == 0)
-        {
-            bounds[3] = i-1;
-            break;
-        }
-    }
-    if (bounds[2] != 0 && bounds[3] == 0 && primes.len-1-bounds[2] > 20)
-    {
-        bounds[3] = primes.len-1;
-    }
-    else if (bounds[3] == 0) return -1;
-    mpz_t last,doubl,last_log;
-    mpz_init_set_ui(last,2);
-    mpz_init(doubl);
-    mpz_init_set_ui(last_log,1);
+    compute_bounds(bounds, primes);
+    if (bounds[3] == 0) return -1;
+
     unsigned long logs[primes.len];
     logs[0] = 1;
-    for (unsigned long i = 1 ; i < primes.len ; i++)
-    {
-        mpz_set(tmp,last);
-        mpz_mul_ui(tmp,tmp,1414213562);
-        mpz_div_ui(tmp,tmp,1000000000);
-        if (mpz_cmp_ui(tmp,*(primes.start+i)) >= 0)
-        {
-            logs[i] = mpz_get_ui(last_log);
-            continue;
-        }
-        mpz_mul_ui(tmp,last,2);
-        if (mpz_cmp_ui(tmp,*(primes.start+i)) >= 0)
-        {
-            mpz_add_ui(tmp,last_log,1);
-            logs[i] = mpz_get_ui(tmp);
-            continue;
-        }
-        while (mpz_cmp_ui(tmp,*(primes.start+i)) == -1)
-        {
-            mpz_add_ui(last_log,last_log,1);
-            mpz_mul_ui(last,last,2);
-            mpz_mul_ui(tmp,last,2);
-        }
-        logs[i] = mpz_get_ui(last_log);
-    }
+
+    compute_logs(primes, tmp, logs);
+
     unsigned long dim = primes.len+1;
     dyn_array relations,smooth_numbers;
     init(&relations);
@@ -297,6 +355,7 @@ int main()
         unsigned long indexp = 0;
         int need_append = 1;
         unsigned long batch_size = 4096;
+
         mpf_t nb_primes1, nb_primes2, nb_large;
         mpf_init(nb_primes1);
         mpf_init(nb_primes2);
@@ -306,8 +365,8 @@ int main()
         mpf_init(var2);
         mpf_init(var3);
         unsigned long objective, seconds = 0;
-        mpz_t multiplier;
-        mpz_t cst;
+        mpz_t multiplier, cst;
+        
         mpz_init_set_ui(cst,*(primes.start+primes.len-1));
         mpf_set_z(tmpf,cst);
         natural_log(tmpf2,tmpf,ln2,e);
@@ -343,9 +402,6 @@ int main()
         mpf_t tmp_long1, tmp_long2;
         mpf_init(tmp_long1);
         mpf_init(tmp_long2);
-        time_t second1 = time(NULL);
-        time_t second2;
-        unsigned long time_diff;
         unsigned long half = mpz_get_ui(M);
         mpz_set(tmp,n);
         my_int_log2(tmp);
@@ -367,6 +423,7 @@ int main()
         mpz_set(tmp,cst);
         my_int_log2(tmp);
         tmp_skipped += mpz_get_d(tmp);
+
         unsigned long skipped = (unsigned long) tmp_skipped;
         unsigned long addup = dim/100;
         unsigned long prime = *(primes.start);
@@ -376,6 +433,11 @@ int main()
         mpz_mul_ui(tmp,tmp,half);
         my_int_log2(tmp);
         smooth_bound = mpz_get_ui(tmp);
+
+        time_t second1 = time(NULL);
+        time_t second2;
+        unsigned long time_diff;
+
         unsigned long time_seed = time(NULL);
         
         if (flag_parallel_sieve)
@@ -528,7 +590,7 @@ int main()
     mpz_mod_ui(tmp2,tmp,60);
     gmp_printf("%Zds needed\n",tmp2);
     unsigned long merge_bound = 5;
-    // reduce_matrix(&bin_matrix,&relations,&smooth_numbers,len,N,&rel_weight,merge_bound);
+    reduce_matrix(&bin_matrix,&relations,&smooth_numbers,len,N,&rel_weight,merge_bound);
     count(bin_matrix,len,relations.len);
     bin_matrix.size = bin_matrix.len;
     bin_matrix.start = realloc(bin_matrix.start,bin_matrix.len*sizeof(unsigned long));
