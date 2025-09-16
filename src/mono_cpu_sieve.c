@@ -244,12 +244,15 @@ void mono_cpu_sieve(
         for (unsigned long i = 0 ; i < sieve_array.len ; i++) *(sieve_array.start+i) = 0;
         reset(&tmp_block);
     }
+    
     for (unsigned long i = 0 ; i < batch_array.len ; i++) mpz_clear(*(batch_array.start+i));
     free(batch_array.start);
     batch_array.start = NULL;
+
     for (unsigned long i = 0 ; i < block.len ; i++) mpz_clear(*(block.start+i));
     free(block.start);
     block.start = NULL;
+
     free(sieve_array.start);
     sieve_array.start = NULL;
 }

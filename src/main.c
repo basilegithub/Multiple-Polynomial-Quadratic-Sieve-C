@@ -242,6 +242,129 @@ void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
     }
 }
 
+int compute_factors(dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len)
+{
+    struct tm tm;
+
+    mpz_t x,y;
+    mpz_init(x);
+    mpz_init(y);
+    unsigned char null_space[relations.len];
+    mpz_t poly;
+    mpz_init_set_ui(poly,1);
+    unsigned long tmp_long = 0;
+    int flag;
+    unsigned long k;
+    mpz_t poly_res;
+    mpz_init(poly_res);
+    mpz_t poly_shift;
+    mpz_init_set_ui(poly_shift,1);
+
+    int block_len = 8; // less or equal to 8 for unsigned char to work
+    unsigned char michel;
+    unsigned char tmp_array[relations.len];
+    unsigned char tmp_vec[relations.len];
+    unsigned long degree = 0;
+    while (1)
+    {
+        tm = *localtime(&(time_t){time(NULL)});
+        printf("\n%d:%d:%d  new block\n",tm.tm_hour,tm.tm_min,tm.tm_sec);
+        for (unsigned long i = 0 ; i < relations.len ; i++)
+        {
+            null_space[i] = 0;
+            for (unsigned long j = 1 ; j < block_len ; j++)
+            {
+                null_space[i] += rand()%2;
+                null_space[i] <<= 1;
+            }
+            null_space[i] += rand()%2;
+        }
+        if (mpz_cmp_ui(poly,1) > 0) poly_eval(relations.len,poly,null_space,null_space,bin_matrix,len);
+        for (unsigned long i = 0 ; i < block_len ; i++)
+        {
+            michel = 1;
+            for (unsigned long j = 0 ; j < relations.len ; j++)
+            {
+                tmp_array[j] = (null_space[j]>>i)&1;
+                tmp_vec[j] = tmp_array[j];
+            }
+            if (tmp_long > 0)
+            {
+                k = 0;
+                flag = 0;
+                for (unsigned long j = 0 ; j < relations.len && !flag ; j++)
+                {
+                    if (tmp_array[j]) flag = 1;
+                }
+                while (k <= tmp_long && flag)
+                {
+                    for (unsigned long j = 0 ; j < relations.len ; j++) tmp_vec[j] = tmp_array[j];
+                    multiply(relations.len,len,bin_matrix,tmp_array,tmp_array);
+                    k++;
+                    flag = 0;
+                    for (unsigned long j = 0 ; j < relations.len && !flag ; j++)
+                    {
+                        if (tmp_array[j]) flag = 1;
+                    }
+                }
+                flag = 1;
+                for (unsigned long j = 0 ; j < relations.len && flag ; j++)
+                {
+                    if (tmp_array[j]) flag = 0;
+                }
+                if (flag) michel = 0;
+                for (unsigned long j = 0 ; j < relations.len ; j++) tmp_array[j] = tmp_vec[j];
+            }
+            if (michel)
+            {
+                wiedemann(bin_matrix,relations.len,tmp_array,len,poly_res,degree);
+                mpz_set(tmp,poly_res);
+                my_int_log2(tmp);
+                degree += mpz_get_ui(tmp);
+                while (mpz_divisible_ui_p(poly_res,2))
+                {
+                    mpz_div_ui(poly_res,poly_res,2);
+                    tmp_long++;
+                    mpz_mul_ui(poly_shift,poly_shift,2);
+                }
+                poly_prod(poly,poly,poly_res);
+                poly_eval(relations.len,poly_res,null_space,null_space,bin_matrix,len);
+                for (unsigned long j = 0 ; j < relations.len ; j++) tmp_array[j] = (null_space[j]>>i)&1;
+                if (mpz_cmp_ui(poly_shift,1) > 0) poly_eval(relations.len,poly_shift,tmp_array,tmp_array,bin_matrix,len);
+            }
+            tm = *localtime(&(time_t){time(NULL)});
+            printf("%d:%d:%d  ",tm.tm_hour,tm.tm_min,tm.tm_sec);
+            if (michel) printf("minimal polynomial updated, ");
+            printf("kernel vector found\n");
+            mpz_set_ui(x,1);
+            mpz_set_ui(y,1);
+            build_sqrt(N,relations.len,tmp_array,primes,x,y,relations,smooth_numbers);
+            mpz_sub(tmp,x,y);
+            mpz_add(tmp2,x,y);
+            mpz_gcd(tmp,tmp,N);
+            mpz_gcd(tmp2,tmp2,N);
+            char array1;
+            char array2;
+            //gmp_printf("%Zd %Zd\n",tmp,tmp2);
+            if (mpz_cmp_ui(tmp,1) != 0 && mpz_cmp(tmp,N) != 0)
+            {
+                if (mpz_probab_prime_p(tmp,100) > 0)
+                {
+                    array1 = 'p';
+                } else {array1 = 'C';}
+                if (mpz_probab_prime_p(tmp2,100) > 0)
+                {
+                    array2 = 'p';
+                } else {array2 = 'C';}
+                tm = *localtime(&(time_t){time(NULL)});
+                gmp_printf("\n%d:%d:%d  %Zd = %Zd (%c) x %Zd (%c)\n",tm.tm_hour,tm.tm_min,tm.tm_sec,N,tmp,array1,tmp2,array2);
+                return 0;
+            }
+        }
+    }
+    return 0;
+}
+
 int main()
 {
     int flag_parallel_sieve = 1;
@@ -376,12 +499,14 @@ int main()
         mpz_sqrt(multiplier,multiplier);
         mpz_mul(cst,cst,multiplier);
         mpf_set_z(tmpf,cst);
+
         natural_log(tmpf2,tmpf,ln2,e);
         mpf_sub_ui(tmpf2,tmpf2,1);
         mpf_div(nb_primes2,tmpf,tmpf2);
         mpf_sub(nb_large,nb_primes2,nb_primes1);
         mpf_div_ui(nb_large,nb_large,2);
         gmp_printf("\tlarge prime bound = %Zd = %Zd*p_max\n",cst,multiplier);
+
         mpz_t tmp_bin;
         mpz_init(tmp_bin);
         unsigned long tmp_a, tmp_b, tmplol;
@@ -395,9 +520,11 @@ int main()
         natural_log(tmpf,tmpf,ln2,e);
         mpf_sub(target,target,tmpf);
         mpf_div(target,target,ln10);
+
         mpz_t tmp_vec2[2];
         for (unsigned long i = 0 ; i < 2 ; i++) mpz_init_set_ui(tmp_vec2[i],0);
         printf("\n");
+
         unsigned long prime_start = 20;
         mpf_t tmp_long1, tmp_long2;
         mpf_init(tmp_long1);
@@ -553,20 +680,26 @@ int main()
         fflush(stdout);
 	}
 	mpz_init(tmp);
+
 	for (unsigned long i = 0 ; i < psmooth.len ; i++) mpz_clear(*(psmooth.start+i));
     free(psmooth.start);
     psmooth.start = NULL;
+
 	for (unsigned long i = 0 ; i < partial.len ; i++) mpz_clear(*(partial.start+i));
     free(partial.start);
     partial.start = NULL;
+
 	for (unsigned long i = 0 ; i < store_partial.len ; i++) mpz_clear(*(store_partial.start+i));
     free(store_partial.start);
     store_partial.start = NULL;
+    
 	mpz_clear(prod_primes);
+
 	tm = *localtime(&(time_t){time(NULL)});
     printf("\n\n%d:%d:%d  sieving done, reducing set of relations from %lu ",tm.tm_hour,tm.tm_min,tm.tm_sec,relations.len);
     reduce_relations(&relations,&smooth_numbers,&primes,n);
     printf("to %lu, building matrix...\n",relations.len);
+
     dyn_array_classic bin_matrix,rel_weight;
     init_classic(&bin_matrix);
     init_classic(&rel_weight);
@@ -594,121 +727,6 @@ int main()
     count(bin_matrix,len,relations.len);
     bin_matrix.size = bin_matrix.len;
     bin_matrix.start = realloc(bin_matrix.start,bin_matrix.len*sizeof(unsigned long));
-    mpz_t x,y;
-    mpz_init(x);
-    mpz_init(y);
-    unsigned char null_space[relations.len];
-    mpz_t poly;
-    mpz_init_set_ui(poly,1);
-    unsigned long tmp_long = 0;
-    int flag;
-    unsigned long k;
-    mpz_t poly_res;
-    mpz_init(poly_res);
-    mpz_t poly_shift;
-    mpz_init_set_ui(poly_shift,1);
 
-    int block_len = 8; // less or equal to 8 for unsigned char to work
-    unsigned char michel;
-    unsigned char tmp_array[relations.len];
-    unsigned char tmp_vec[relations.len];
-    unsigned long degree = 0;
-    while (1)
-    {
-        tm = *localtime(&(time_t){time(NULL)});
-        printf("\n%d:%d:%d  new block\n",tm.tm_hour,tm.tm_min,tm.tm_sec);
-        for (unsigned long i = 0 ; i < relations.len ; i++)
-        {
-            null_space[i] = 0;
-            for (unsigned long j = 1 ; j < block_len ; j++)
-            {
-                null_space[i] += rand()%2;
-                null_space[i] <<= 1;
-            }
-            null_space[i] += rand()%2;
-        }
-        if (mpz_cmp_ui(poly,1) > 0) poly_eval(relations.len,poly,null_space,null_space,bin_matrix,len);
-        for (unsigned long i = 0 ; i < block_len ; i++)
-        {
-            michel = 1;
-            for (unsigned long j = 0 ; j < relations.len ; j++)
-            {
-                tmp_array[j] = (null_space[j]>>i)&1;
-                tmp_vec[j] = tmp_array[j];
-            }
-            if (tmp_long > 0)
-            {
-                k = 0;
-                flag = 0;
-                for (unsigned long j = 0 ; j < relations.len && !flag ; j++)
-                {
-                    if (tmp_array[j]) flag = 1;
-                }
-                while (k <= tmp_long && flag)
-                {
-                    for (unsigned long j = 0 ; j < relations.len ; j++) tmp_vec[j] = tmp_array[j];
-                    multiply(relations.len,len,bin_matrix,tmp_array,tmp_array);
-                    k++;
-                    flag = 0;
-                    for (unsigned long j = 0 ; j < relations.len && !flag ; j++)
-                    {
-                        if (tmp_array[j]) flag = 1;
-                    }
-                }
-                flag = 1;
-                for (unsigned long j = 0 ; j < relations.len && flag ; j++)
-                {
-                    if (tmp_array[j]) flag = 0;
-                }
-                if (flag) michel = 0;
-                for (unsigned long j = 0 ; j < relations.len ; j++) tmp_array[j] = tmp_vec[j];
-            }
-            if (michel)
-            {
-                wiedemann(bin_matrix,relations.len,tmp_array,len,poly_res,degree);
-                mpz_set(tmp,poly_res);
-                my_int_log2(tmp);
-                degree += mpz_get_ui(tmp);
-                while (mpz_divisible_ui_p(poly_res,2))
-                {
-                    mpz_div_ui(poly_res,poly_res,2);
-                    tmp_long++;
-                    mpz_mul_ui(poly_shift,poly_shift,2);
-                }
-                poly_prod(poly,poly,poly_res);
-                poly_eval(relations.len,poly_res,null_space,null_space,bin_matrix,len);
-                for (unsigned long j = 0 ; j < relations.len ; j++) tmp_array[j] = (null_space[j]>>i)&1;
-                if (mpz_cmp_ui(poly_shift,1) > 0) poly_eval(relations.len,poly_shift,tmp_array,tmp_array,bin_matrix,len);
-            }
-            tm = *localtime(&(time_t){time(NULL)});
-            printf("%d:%d:%d  ",tm.tm_hour,tm.tm_min,tm.tm_sec);
-            if (michel) printf("minimal polynomial updated, ");
-            printf("kernel vector found\n");
-            mpz_set_ui(x,1);
-            mpz_set_ui(y,1);
-            build_sqrt(N,relations.len,tmp_array,primes,x,y,relations,smooth_numbers);
-            mpz_sub(tmp,x,y);
-            mpz_add(tmp2,x,y);
-            mpz_gcd(tmp,tmp,N);
-            mpz_gcd(tmp2,tmp2,N);
-            char array1;
-            char array2;
-            //gmp_printf("%Zd %Zd\n",tmp,tmp2);
-            if (mpz_cmp_ui(tmp,1) != 0 && mpz_cmp(tmp,N) != 0)
-            {
-                if (mpz_probab_prime_p(tmp,100) > 0)
-                {
-                    array1 = 'p';
-                } else {array1 = 'C';}
-                if (mpz_probab_prime_p(tmp2,100) > 0)
-                {
-                    array2 = 'p';
-                } else {array2 = 'C';}
-                tm = *localtime(&(time_t){time(NULL)});
-                gmp_printf("\n%d:%d:%d  %Zd = %Zd (%c) x %Zd (%c)\n",tm.tm_hour,tm.tm_min,tm.tm_sec,N,tmp,array1,tmp2,array2);
-                return 0;
-            }
-        }
-    }
-    return 0;
+    return compute_factors(relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
 }
