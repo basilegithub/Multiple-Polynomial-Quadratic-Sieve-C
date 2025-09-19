@@ -3,7 +3,7 @@
 
 #include "structures.h"
 
-void batch_smooth(dyn_array* reported, mpz_t prod_primes, mpz_t limit, dyn_array* large_primes, dyn_array_classic* smooth, dyn_array* tmp_array, unsigned long prime)
+void batch_smooth(dyn_array* reported, dyn_array* large_primes, dyn_array_classic* smooth, dyn_array* tmp_array, mpz_t prod_primes, mpz_t limit, unsigned long prime)
 {
     for (mpz_t* ptr = reported->start ; ptr < reported->start+reported->len ; ptr++)
     {
@@ -101,4 +101,40 @@ void batch_smooth(dyn_array* reported, mpz_t prod_primes, mpz_t limit, dyn_array
         }
     }
     mpz_clears(tmp,boring,NULL);
+}
+
+void naive_smooth(dyn_array* reported, dyn_array* large_primes, dyn_array_classic* smooth, dyn_array_classic primes, mpz_t limit)
+{
+    mpz_t tmp, tmp2;
+    mpz_init(tmp);
+    mpz_init(tmp2);
+    unsigned long i = 0;
+
+    for (mpz_t* ptr = reported->start ; ptr < reported->start+reported->len ; ptr++)
+    {
+        mpz_set(tmp, *ptr);
+        for (unsigned long i = 0 ; i < primes.len ; i++)
+        {
+            mpz_mod_ui(tmp2, tmp, *(primes.start+i));
+
+            while (!mpz_cmp_ui(tmp2, 0))
+            {
+                mpz_div_ui(tmp, tmp, *(primes.start+i));
+                mpz_mod_ui(tmp2, tmp, *(primes.start+i));
+            }
+        }
+
+        if (!mpz_cmp_ui(tmp, 1))
+        {
+            *(smooth->start+i) = 1;
+        }
+        else if (mpz_cmp(tmp, limit) < 1)
+        {
+            *(smooth->start+i) = 1;
+            mpz_set(*(large_primes->start+i), tmp);
+        }
+
+        i++;
+    }
+    mpz_clears(tmp, tmp2, NULL);
 }

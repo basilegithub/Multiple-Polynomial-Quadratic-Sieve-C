@@ -55,6 +55,7 @@ void mono_cpu_sieve(
     unsigned long* bounds,
     unsigned long* logs,
     int* need_append,
+    int flag_batch_smooth,
     time_t second1,
     time_t second2
 )
@@ -165,7 +166,14 @@ void mono_cpu_sieve(
             append_only(&coefficient,poly_b);
             if (to_batch.len == batch_size)
             {
-                batch_smooth(&to_batch,prod_primes,cst,&large_primes,&is_smooth,&batch_array,prime);
+                if (flag_batch_smooth)
+                {
+                    batch_smooth(&to_batch,&large_primes,&is_smooth,&batch_array,prod_primes,cst,prime);
+                }
+                else
+                {
+                    naive_smooth(&to_batch, &large_primes, &is_smooth, primes, cst);
+                }
 
                 for (unsigned long k = 0 ; k < batch_size ; k++)
                 {
@@ -244,15 +252,12 @@ void mono_cpu_sieve(
         for (unsigned long i = 0 ; i < sieve_array.len ; i++) *(sieve_array.start+i) = 0;
         reset(&tmp_block);
     }
-    
     for (unsigned long i = 0 ; i < batch_array.len ; i++) mpz_clear(*(batch_array.start+i));
     free(batch_array.start);
     batch_array.start = NULL;
-
     for (unsigned long i = 0 ; i < block.len ; i++) mpz_clear(*(block.start+i));
     free(block.start);
     block.start = NULL;
-
     free(sieve_array.start);
     sieve_array.start = NULL;
 }

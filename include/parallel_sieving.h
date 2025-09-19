@@ -51,6 +51,7 @@ void parallel_sieve(
     unsigned long* bounds,
     unsigned long* logs,
     int* need_append,
+    int flag_batch_smooth,
     time_t second1,
     time_t second2
 );

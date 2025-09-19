@@ -14,7 +14,7 @@ Here are some detailed characteristics :
 - Small multiplier used
 - Multiple polynomials used for sieving
 - Single large prime variation used to collect relations
-- Batch smoothness test available
+- Batch smoothness and trial division tests available
 - Parallel sieving always performed
 - Wiedemann algorithm used for the linear algebra step
 

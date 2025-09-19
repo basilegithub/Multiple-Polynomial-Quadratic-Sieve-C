@@ -56,6 +56,7 @@ void parallel_sieve(
     unsigned long* bounds,
     unsigned long* logs,
     int* need_append,
+    int flag_batch_smooth,
     time_t second1,
     time_t second2
 )
@@ -169,7 +170,15 @@ void parallel_sieve(
                     append_only(&coefficient,poly_b);
                     if (to_batch.len == batch_size)
                     {
-                        batch_smooth(&to_batch,prod_primes,cst,&large_primes,&is_smooth,&batch_array,prime);
+                        if (flag_batch_smooth)
+                        {
+                            batch_smooth(&to_batch,&large_primes,&is_smooth,&batch_array,prod_primes,cst,prime);
+                        }
+                        else
+                        {
+                            naive_smooth(&to_batch, &large_primes, &is_smooth, primes, cst);
+                        }
+                        
                         #pragma omp critical
                         {
                             for (unsigned long k = 0 ; k < batch_size ; k++)
