@@ -50,7 +50,7 @@ The program will ask you to input the number you want to factor.
 For now, you can only change flag values at the beginning of the main function.
 You then have to recompile the program to run with the updated version of the flag.
 
-- flag_parallel_sieve : If 1, all the available CPUs are used for sieving. If 0, only one CPU is used ofr sieving.
+- flag_parallel_sieve : If 1, all the available CPUs are used for sieving. If 0, only one CPU is used for sieving.
 
 - flag_batch_smooth : If 1, the batch smoothness test is used. If 0, the trial division (naive) test is used.
 
