@@ -1,5 +1,6 @@
 #include <gmp.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "structures.h"
 
@@ -58,8 +59,10 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 {
     dyn_array_classic weights;
     init_classic(&weights);
+
     dyn_array_classic sorted;
     init_classic(&sorted);
+
     unsigned long line_len = 0;
     unsigned long place = 0;
     unsigned long tmp, tmp2, tmp3 = 0;
@@ -355,7 +358,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
                 {
                     if (*(sorted.start+aa) > *(sorted.start)) *(sorted.start+aa) -= 1;
                 }
-                delete_classic_first(&sorted);
+                delete_classic(&sorted, 0);
             }
             else
             {
@@ -417,6 +420,8 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
     }*/
 
     unsigned long line_index,a,b,A,B,TMP,M;
+    dyn_array_classic remainer;
+    init_classic(&remainer);
     while (*(weights.start+*(sorted.start)) <= merge_bound)
     {
         i = 0;
@@ -433,8 +438,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
                 tmp = *(matrix->start+i+j);
                 if (*(rel_weight->start+tmp) < *(rel_weight->start+pivot)) pivot = tmp;
             }
-            dyn_array_classic remainer;
-            init_classic(&remainer);
+            remainer.len = 0;
             for (unsigned long j = 0 ; j < *(weights.start+tmp2) ; j++)
             {
                 if (*(matrix->start+i+j) != pivot)
