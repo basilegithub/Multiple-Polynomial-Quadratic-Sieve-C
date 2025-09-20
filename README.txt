@@ -45,6 +45,9 @@ Wiedemann algorithm:
 You just need to run the build/MPQS_v_1_0_0.exe program in a terminal.
 The program will ask you to input the number you want to factor.
 
+You HAVE to have a "config.txt" file in a "config" folder located in the same folder in which you are running the .exe file.
+If you clone the repo, you should be good.
+
 ##### config parameters #####
 
 Here are the following parameters you can edit in the config file:
