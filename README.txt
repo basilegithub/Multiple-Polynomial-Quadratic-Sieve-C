@@ -78,9 +78,8 @@ Here are some points I consider working on at some point:
 
 Here are the next steps:
 
-- I still have to implement many features : choose how many cpu are used for sieving, adding
-	gaussian elimination and block Lanczos algorithms for the linear algebra step, use
-	double large prime variation.
+- I still have to implement many features : adding gaussian elimination and block Lanczos
+	algorithms for the linear algebra step, use double large prime variation.
 
 - I have to continue cleaning up the code.
 
