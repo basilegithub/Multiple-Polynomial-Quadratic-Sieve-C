@@ -1,0 +1,2 @@
+flag_parallel_sieve=1
+flag_batch_smooth=1

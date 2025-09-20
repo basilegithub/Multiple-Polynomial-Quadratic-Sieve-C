@@ -5,6 +5,7 @@
 #include <omp.h>
 #include <gmp.h>
 
+#include "config.h"
 #include "structures.h"
 #include "utils.h"
 #include "generate_primes.h"
@@ -367,10 +368,14 @@ int compute_factors(dyn_array relations, dyn_array smooth_numbers, dyn_array_cla
 
 int main()
 {
-    int flag_parallel_sieve = 1;
-    int flag_batch_smooth = 1;
-
     printf("program started\n\n");
+
+    char* config_path = "./config/config.txt";
+    int flag_parallel_sieve;
+    int flag_batch_smooth;
+
+    parse_config(config_path, &flag_parallel_sieve, &flag_batch_smooth);
+
     srand(time(NULL));
     mpz_t N,n,b,tmp,tmp2;
     mpz_init_set_ui(n,3);
