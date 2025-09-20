@@ -371,10 +371,10 @@ int main()
     printf("program started\n\n");
 
     char* config_path = "./config/config.txt";
-    int flag_parallel_sieve;
+    int nb_cpu_sieve;
     int flag_batch_smooth;
 
-    parse_config(config_path, &flag_parallel_sieve, &flag_batch_smooth);
+    parse_config(config_path, &nb_cpu_sieve, &flag_batch_smooth);
 
     srand(time(NULL));
     mpz_t N,n,b,tmp,tmp2;
@@ -569,11 +569,8 @@ int main()
 
         unsigned long time_seed = time(NULL);
         
-        if (flag_parallel_sieve)
+        if (nb_cpu_sieve > 1)
         {
-            //omp_set_num_threads(4);
-            printf("sieving using %d threads...\n",omp_get_max_threads());
-
             parallel_sieve(
                         &relations,
                         &smooth_numbers,
@@ -619,6 +616,7 @@ int main()
                         bounds,
                         logs,
                         &need_append,
+                        nb_cpu_sieve,
                         flag_batch_smooth,
                         second1,
                         second2

@@ -60,6 +60,8 @@ void mono_cpu_sieve(
     time_t second2
 )
 {
+    printf("Sieving with 1 cpu...\n");
+
     mpz_t poly_a, poly_b, poly_c;
     mpz_init(poly_a);
     mpz_init(poly_b);

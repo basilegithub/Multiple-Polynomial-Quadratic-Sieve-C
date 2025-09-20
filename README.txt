@@ -15,7 +15,7 @@ Here are some detailed characteristics :
 - Multiple polynomials used for sieving
 - Single large prime variation used to collect relations
 - Batch smoothness and trial division tests available
-- 1 CPU or all CPU sieving possible
+- 1 cpu or parallel sieving available
 - Wiedemann algorithm used for the linear algebra step
 
 ##### Sources #####
@@ -49,7 +49,7 @@ The program will ask you to input the number you want to factor.
 
 Here are the following parameters you can edit in the config file:
 
-- flag_parallel_sieve : If 0, only one CPU is used for sieving. Else, all the available CPUs are used for sieving.
+- nb_cpu_sieve : Sets the number of cpu used in the sieving step.
 
 - flag_batch_smooth : If 0, the trial division (naive) test is used. Else, the batch smoothness test is used. 
 
@@ -79,7 +79,8 @@ Here are some points I consider working on at some point:
 Here are the next steps:
 
 - I still have to implement many features : choose how many cpu are used for sieving, adding
-	gaussian elimination and block Lanczos algorithms for the linear algebra step.
+	gaussian elimination and block Lanczos algorithms for the linear algebra step, use
+	double large prime variation.
 
 - I have to continue cleaning up the code.
 

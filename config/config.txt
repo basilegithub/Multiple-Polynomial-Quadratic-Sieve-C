@@ -1,2 +1,2 @@
-flag_parallel_sieve=1
+nb_cpu_sieve=4
 flag_batch_smooth=1

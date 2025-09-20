@@ -56,11 +56,21 @@ void parallel_sieve(
     unsigned long* bounds,
     unsigned long* logs,
     int* need_append,
+    int nb_cpu_sieve,
     int flag_batch_smooth,
     time_t second1,
     time_t second2
 )
 {
+    if (nb_cpu_sieve > omp_get_max_threads())
+    {
+        printf("You don't have %d cpu available, sieving with %d cpu instead...\n", nb_cpu_sieve,  omp_get_max_threads());
+    }
+    else
+    {
+        omp_set_num_threads(nb_cpu_sieve);
+        printf("Sieving with %d cpu ...\n", nb_cpu_sieve);
+    }
     #pragma omp parallel
         {
             srand(time_seed^ omp_get_thread_num());
