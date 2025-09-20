@@ -7,6 +7,7 @@
 #include "structures.h"
 
 void parallel_sieve(
+    FILE *logfile,
     dyn_array* relations,
     dyn_array* smooth_numbers,
     dyn_array* store_partial,

@@ -5,6 +5,7 @@
 #include <omp.h>
 #include <gmp.h>
 
+#include "logs.h"
 #include "config.h"
 #include "structures.h"
 #include "utils.h"
@@ -16,7 +17,7 @@
 #include "compute_sqrt.h"
 #include "reduce_matrix.h"
 
-void count(dyn_array_classic matrix, unsigned long limit,unsigned long dim)
+void count(FILE *logfile, dyn_array_classic matrix, unsigned long limit, unsigned long dim)
 {
     unsigned long nb_lines = 0;
     unsigned long nonzero = 0;
@@ -27,22 +28,7 @@ void count(dyn_array_classic matrix, unsigned long limit,unsigned long dim)
     }
     double density = (double) nonzero/nb_lines;
     struct tm tm = *localtime(&(time_t){time(NULL)});
-    printf("%d:%d:%d  matrix reduced to %lux%lu ; %lu nonzero values, density = %.2f ",tm.tm_hour,tm.tm_min,tm.tm_sec,dim,nb_lines,nonzero,density);
-    mpz_t tmp,tmp2;
-    mpz_init(tmp2);
-    mpz_init_set_d(tmp,density);
-    mpz_mul_ui(tmp,tmp,dim);
-    mpz_mul_ui(tmp,tmp,dim);
-    mpz_mul_ui(tmp,tmp,13);
-    mpz_div_ui(tmp,tmp,220433617);
-    mpz_div_ui(tmp2,tmp,3600);
-    gmp_printf("%Zdh ",tmp2);
-    mpz_mod_ui(tmp2,tmp,3600);
-    mpz_div_ui(tmp2,tmp2,60);
-    gmp_printf("%Zdm ",tmp2);
-    mpz_mod_ui(tmp2,tmp,60);
-    gmp_printf("%Zds needed\n",tmp2);
-    mpz_clears(tmp,tmp2,NULL);
+    log_msg(logfile, "matrix reduced to %lux%lu ; %lu nonzero values, density = %.2f", dim, nb_lines, nonzero, density);
 }
 
 void initialize_1(gmp_randstate_t state, mpf_t ln10, mpf_t ln2, mpf_t e)
@@ -152,21 +138,21 @@ void compute_b(mpf_t bound, mpf_t e, mpf_t ln2, mpf_t tmpf, mpf_t tmpf2, mpz_t b
     mpz_set_f(b,tmpf);
 }
 
-void print_bits_and_digits(mpz_t n, mpz_t tmp)
+void print_bits_and_digits(FILE *logfile, mpz_t n, mpz_t tmp, mpz_t tmp2)
 {
     mpz_set(tmp,n);
     my_int_log2(tmp);
     mpz_add_ui(tmp, tmp, 1);
-    gmp_printf("%Zd bits ; ", tmp);
 
     unsigned long digits = 0;
-    mpz_set(tmp, n);
-    while (mpz_cmp_ui(tmp, 0))
+    mpz_set(tmp2, n);
+    while (mpz_cmp_ui(tmp2, 0))
     {
-        mpz_div_ui(tmp, tmp, 10);
+        mpz_div_ui(tmp2, tmp2, 10);
         digits++;
     }
-    printf("%lu digits\n", digits);
+
+    log_gmp_msg(logfile, "%Zd bits ; %lu digits", tmp, digits);
 }
 
 void compute_factor_base(dyn_array_classic* primes, dyn_array* a, dyn_array_classic B, mpz_t* prod_primes, mpz_t n, mpz_t tmp2, gmp_randstate_t state)
@@ -243,7 +229,7 @@ void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
     }
 }
 
-int compute_factors(dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len)
+void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len)
 {
     struct tm tm;
 
@@ -269,7 +255,7 @@ int compute_factors(dyn_array relations, dyn_array smooth_numbers, dyn_array_cla
     while (1)
     {
         tm = *localtime(&(time_t){time(NULL)});
-        printf("\n%d:%d:%d  new block\n",tm.tm_hour,tm.tm_min,tm.tm_sec);
+        log_msg(logfile, "new block");
         for (unsigned long i = 0 ; i < relations.len ; i++)
         {
             null_space[i] = 0;
@@ -334,9 +320,8 @@ int compute_factors(dyn_array relations, dyn_array smooth_numbers, dyn_array_cla
                 if (mpz_cmp_ui(poly_shift,1) > 0) poly_eval(relations.len,poly_shift,tmp_array,tmp_array,bin_matrix,len);
             }
             tm = *localtime(&(time_t){time(NULL)});
-            printf("%d:%d:%d  ",tm.tm_hour,tm.tm_min,tm.tm_sec);
-            if (michel) printf("minimal polynomial updated, ");
-            printf("kernel vector found\n");
+            if (michel) log_msg(logfile, "Minimal polynomial updated, kernel vector found");
+            else log_msg(logfile, "Kernel vector found");
             mpz_set_ui(x,1);
             mpz_set_ui(y,1);
             build_sqrt(N,relations.len,tmp_array,primes,x,y,relations,smooth_numbers);
@@ -346,7 +331,7 @@ int compute_factors(dyn_array relations, dyn_array smooth_numbers, dyn_array_cla
             mpz_gcd(tmp2,tmp2,N);
             char array1;
             char array2;
-            //gmp_printf("%Zd %Zd\n",tmp,tmp2);
+
             if (mpz_cmp_ui(tmp,1) != 0 && mpz_cmp(tmp,N) != 0)
             {
                 if (mpz_probab_prime_p(tmp,100) > 0)
@@ -358,17 +343,21 @@ int compute_factors(dyn_array relations, dyn_array smooth_numbers, dyn_array_cla
                     array2 = 'p';
                 } else {array2 = 'C';}
                 tm = *localtime(&(time_t){time(NULL)});
-                gmp_printf("\n%d:%d:%d  %Zd = %Zd (%c) x %Zd (%c)\n",tm.tm_hour,tm.tm_min,tm.tm_sec,N,tmp,array1,tmp2,array2);
-                return 0;
+                log_blank_line(logfile);
+                log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
+                return;
             }
         }
     }
-    return 0;
 }
 
 int main()
 {
     printf("program started\n\n");
+
+    FILE *logfile = NULL;
+
+    init_log(&logfile);
 
     char* config_path = "./config/config.txt";
     int nb_cpu_sieve;
@@ -424,14 +413,14 @@ int main()
 
     compute_b(bound, e, ln2, tmpf, tmpf2, b);
 
-    print_bits_and_digits(n, tmp);
+    print_bits_and_digits(logfile, n, tmp, tmp2);
 
     mpf_sub(tmpf,best_time,time1);
     myexp(tmpf,tmpf,e);
     mpf_neg(tmpf,tmpf);
     mpf_add_ui(tmpf,tmpf,1);
     mpf_mul_ui(tmpf,tmpf,100);
-    gmp_printf("multiplier used : %lu ; expected time gain = %.4Ff %%\n",best_mult,tmpf);
+    log_gmp_msg(logfile, "multiplier used : %lu ; expected time gain = %.4Ff %%", best_mult, tmpf);
     printf("\n");
     mpz_t m,M;
     mpz_init(m);
@@ -457,8 +446,8 @@ int main()
     compute_factor_base(&primes, &a, B, &prod_primes, n, tmp2, state);
 
     struct tm tm = *localtime(&(time_t){time(NULL)});
-    printf("%d:%d:%d\n\tfactor base created : %lu primes\n",tm.tm_hour,tm.tm_min,tm.tm_sec,primes.len);
-    printf("\tp_max = %lu\n",*(primes.start+primes.len-1));
+    log_msg(logfile, "Factor base created : %lu primes", primes.len);
+    log_msg(logfile, "p_max = %lu",*(primes.start+primes.len-1));
 
     unsigned long bounds[4] = {0,0,0,0};
     compute_bounds(bounds, primes);
@@ -510,7 +499,7 @@ int main()
         mpf_div(nb_primes2,tmpf,tmpf2);
         mpf_sub(nb_large,nb_primes2,nb_primes1);
         mpf_div_ui(nb_large,nb_large,2);
-        gmp_printf("\tlarge prime bound = %Zd = %Zd*p_max\n",cst,multiplier);
+        log_gmp_msg(logfile, "Large prime bound = %Zd = %Zd*p_max", cst, multiplier);
         mpz_t tmp_bin;
         mpz_init(tmp_bin);
         unsigned long tmp_a, tmp_b, tmplol;
@@ -572,6 +561,7 @@ int main()
         if (nb_cpu_sieve > 1)
         {
             parallel_sieve(
+                        logfile,
                         &relations,
                         &smooth_numbers,
                         &store_partial,
@@ -624,7 +614,7 @@ int main()
         }
         else
         {
-            printf("sieving using 1 thread...\n");
+            log_msg(logfile, "Sieving using 1 cpu...");
 
             mono_cpu_sieve(
                         &relations,
@@ -677,10 +667,16 @@ int main()
                     );
         }
         
-
         printf("\r%lu/(%lu+20+%lu) relations found : full = %lu ; partial = %lu (%lu)",relations.len,dim,addup,full_found,partial_found,indexp);
         fflush(stdout);
+
+        printf("\r\033[K");
+        fflush(stdout);
+        printf("\r");
+        fflush(stdout);
+        log_msg(logfile, "%lu/(%lu+20+%lu) relations found : full = %lu ; partial = %lu (%lu)",relations.len, dim, addup, full_found, partial_found, indexp);
 	}
+
 	mpz_init(tmp);
 	for (unsigned long i = 0 ; i < psmooth.len ; i++) mpz_clear(*(psmooth.start+i));
     free(psmooth.start);
@@ -691,11 +687,13 @@ int main()
 	for (unsigned long i = 0 ; i < store_partial.len ; i++) mpz_clear(*(store_partial.start+i));
     free(store_partial.start);
     store_partial.start = NULL;
+
 	mpz_clear(prod_primes);
 	tm = *localtime(&(time_t){time(NULL)});
-    printf("\n\n%d:%d:%d  sieving done, reducing set of relations from %lu ",tm.tm_hour,tm.tm_min,tm.tm_sec,relations.len);
+    unsigned long relations_len = relations.len;
     reduce_relations(&relations,&smooth_numbers,&primes,n);
-    printf("to %lu, building matrix...\n",relations.len);
+    log_blank_line(logfile);
+    log_msg(logfile, "Sieving done, reducing set of relations from %lu to %lu, building matrix...", relations_len, relations.len);
     dyn_array_classic bin_matrix,rel_weight;
     init_classic(&bin_matrix);
     init_classic(&rel_weight);
@@ -705,24 +703,15 @@ int main()
     build_matrix(&bin_matrix,relations,primes,&nonzero,&density,&nb_lines,&rel_weight);
     unsigned long len = relations.len;
     tm = *localtime(&(time_t){time(NULL)});
-    printf("%d:%d:%d  matrix built %lux%lu ; %lu nonzero values, density = %.2f ",tm.tm_hour,tm.tm_min,tm.tm_sec,len,nb_lines,nonzero,density);
-    mpz_set_d(tmp,density);
-    mpz_mul_ui(tmp,tmp,len);
-    mpz_mul_ui(tmp,tmp,len);
-    mpz_mul_ui(tmp,tmp,13);
-    mpz_div_ui(tmp,tmp,220433617);
-    mpz_div_ui(tmp2,tmp,3600);
-    gmp_printf("%Zdh ",tmp2);
-    mpz_mod_ui(tmp2,tmp,3600);
-    mpz_div_ui(tmp2,tmp2,60);
-    gmp_printf("%Zdm ",tmp2);
-    mpz_mod_ui(tmp2,tmp,60);
-    gmp_printf("%Zds needed\n",tmp2);
+    log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
     unsigned long merge_bound = 5;
     reduce_matrix(&bin_matrix,&relations,&smooth_numbers,len,N,&rel_weight,merge_bound);
-    count(bin_matrix,len,relations.len);
+    count(logfile, bin_matrix, len, relations.len);
+    log_blank_line(logfile);
     bin_matrix.size = bin_matrix.len;
     bin_matrix.start = realloc(bin_matrix.start,bin_matrix.len*sizeof(unsigned long));
 
-    return compute_factors(relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
+    compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
+
+    if (logfile) fclose(logfile);
 }

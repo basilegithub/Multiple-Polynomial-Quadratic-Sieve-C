@@ -4,6 +4,7 @@
 #include <time.h>
 #include <omp.h>
 
+#include "logs.h"
 #include "structures.h"
 #include "utils.h"
 #include "polynomial_functions.h"
@@ -12,6 +13,7 @@
 #include "relations.h"
 
 void parallel_sieve(
+    FILE *logfile,
     dyn_array* relations,
     dyn_array* smooth_numbers,
     dyn_array* store_partial,
@@ -64,12 +66,13 @@ void parallel_sieve(
 {
     if (nb_cpu_sieve > omp_get_max_threads())
     {
-        printf("You don't have %d cpu available, sieving with %d cpu instead...\n", nb_cpu_sieve,  omp_get_max_threads());
+        log_msg(logfile, "You don't have %d cpu available, sieving with %d cpu instead...\n", nb_cpu_sieve,  omp_get_max_threads());
+        omp_set_num_threads(omp_get_max_threads());
     }
     else
     {
+        log_msg(logfile, "Sieving with %d cpu...\n", nb_cpu_sieve);
         omp_set_num_threads(nb_cpu_sieve);
-        printf("Sieving with %d cpu ...\n", nb_cpu_sieve);
     }
     #pragma omp parallel
         {
