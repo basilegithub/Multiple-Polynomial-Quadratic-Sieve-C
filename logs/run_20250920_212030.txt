@@ -1,0 +1,17 @@
+2025-09-20 21:20:34 132 bits ; 40 digits
+2025-09-20 21:20:34 multiplier used : 1 ; expected time gain = 0.0000 %
+2025-09-20 21:20:34 Factor base created : 503 primes
+2025-09-20 21:20:34 p_max = 7993
+2025-09-20 21:20:34 Large prime bound = 711377 = 89*p_max
+2025-09-20 21:20:34 Sieving with 4 cpu...
+
+2025-09-20 21:20:35 603/(504+20+5) relations found : full = 398 ; partial = 205 (1838)
+
+2025-09-20 21:20:35 Sieving done, reducing set of relations from 603 to 546, building matrix...
+2025-09-20 21:20:35 matrix built 546x445 ; 10346 nonzero values, density = 23.25
+2025-09-20 21:20:35 matrix reduced to 284x269 ; 7869 nonzero values, density = 29.25
+
+2025-09-20 21:20:35 new block
+2025-09-20 21:20:35 Minimal polynomial updated, kernel vector found
+
+2025-09-20 21:20:35 4484512566095842058393877054158806882129 = 56918918885152261559 (p) x 78787732689449618231 (p)
