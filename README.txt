@@ -16,7 +16,7 @@ Here are some detailed characteristics :
 - Single large prime variation used to collect relations
 - Batch smoothness and trial division tests available
 - 1 cpu or parallel sieving available
-- Wiedemann algorithm used for the linear algebra step
+- Wiedemann algorithm or gaussian elimination available for the linear algebra step
 
 ##### Sources #####
 
@@ -56,6 +56,8 @@ Here are the following parameters you can edit in the config file:
 
 - flag_batch_smooth : If 0, the trial division (naive) test is used. Else, the batch smoothness test is used. 
 
+- flag_gaussian_elimination : If 0, Widemann algorithm is performed. Otherwise, Gaussian elimination is performed.
+
 ##### General discussion #####
 
 I tried overall to use as few exernal libraries as possible. While this makes the code 
@@ -81,8 +83,8 @@ Here are some points I consider working on at some point:
 
 Here are the next steps:
 
-- I still have to implement many features : adding gaussian elimination and block Lanczos
-	algorithms for the linear algebra step, use double large prime variation.
+- I still have to implement many features : adding block Lanczos algorithms for the linear algebra step,
+	use double large prime variation.
 
 - I have to continue cleaning up the code.
 

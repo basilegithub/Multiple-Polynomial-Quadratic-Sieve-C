@@ -12,7 +12,7 @@ void trim(char *str)
         *end-- = '\0';
 }
 
-void parse_config(char* config_path, int* nb_cpu_sieve, int* flag_batch_smooth)
+void parse_config(char* config_path, int* nb_cpu_sieve, int* flag_batch_smooth, int *flag_gaussian_elimination)
 {
     FILE *file = fopen(config_path, "r");
     if (!file) {
@@ -37,6 +37,9 @@ void parse_config(char* config_path, int* nb_cpu_sieve, int* flag_batch_smooth)
             *nb_cpu_sieve = atoi(value);
         } else if (strcmp(key, "flag_batch_smooth") == 0) {
             *flag_batch_smooth = atoi(value);
+        }
+        else if (strcmp(key, "flag_gaussian_elimination") == 0) {
+            *flag_gaussian_elimination = atoi(value);
         }
     }
 

@@ -12,10 +12,11 @@
 #include "generate_primes.h"
 #include "mono_cpu_sieving.h"
 #include "parallel_sieving.h"
-#include "wiedemann.h"
 #include "build_matrix.h"
-#include "compute_sqrt.h"
 #include "reduce_matrix.h"
+#include "gaussian_elimination.h"
+#include "wiedemann.h"
+#include "compute_sqrt.h"
 
 void count(FILE *logfile, dyn_array_classic matrix, unsigned long limit, unsigned long dim)
 {
@@ -351,6 +352,23 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
     }
 }
 
+void convert_to_vec(mpz_t embedding, unsigned long relations_len, unsigned char tmp_vec[relations_len])
+{
+    mpz_t tmp, tmp2;
+    mpz_inits(tmp, tmp2, NULL);
+    mpz_set_ui(tmp2, 1);
+
+    for (unsigned long i = 0 ; i < relations_len ; i++)
+    {
+        mpz_and(tmp, embedding, tmp2);
+        tmp_vec[relations_len-i-1] = (unsigned char) mpz_get_d(tmp);
+
+        mpz_div_2exp(embedding, embedding, 1);
+    }
+
+    mpz_clears(tmp, tmp2, NULL);
+}
+
 int main()
 {
     printf("program started\n\n");
@@ -362,8 +380,9 @@ int main()
     char* config_path = "./config/config.txt";
     int nb_cpu_sieve;
     int flag_batch_smooth;
+    int flag_gaussian_elimination;
 
-    parse_config(config_path, &nb_cpu_sieve, &flag_batch_smooth);
+    parse_config(config_path, &nb_cpu_sieve, &flag_batch_smooth, &flag_gaussian_elimination);
 
     srand(time(NULL));
     mpz_t N,n,b,tmp,tmp2;
@@ -694,24 +713,87 @@ int main()
     reduce_relations(&relations,&smooth_numbers,&primes,n);
     log_blank_line(logfile);
     log_msg(logfile, "Sieving done, reducing set of relations from %lu to %lu, building matrix...", relations_len, relations.len);
-    dyn_array_classic bin_matrix,rel_weight;
-    init_classic(&bin_matrix);
-    init_classic(&rel_weight);
-    unsigned long nonzero;
-    double density;
-    unsigned long nb_lines;
-    build_matrix(&bin_matrix,relations,primes,&nonzero,&density,&nb_lines,&rel_weight);
-    unsigned long len = relations.len;
-    tm = *localtime(&(time_t){time(NULL)});
-    log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
-    unsigned long merge_bound = 5;
-    reduce_matrix(&bin_matrix,&relations,&smooth_numbers,len,N,&rel_weight,merge_bound);
-    count(logfile, bin_matrix, len, relations.len);
-    log_blank_line(logfile);
-    bin_matrix.size = bin_matrix.len;
-    bin_matrix.start = realloc(bin_matrix.start,bin_matrix.len*sizeof(unsigned long));
 
-    compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
+    if (flag_gaussian_elimination)
+    {
+        mpz_t x,y;
+        mpz_init(x);
+        mpz_init(y);
+
+        unsigned long base_size = primes.len + 1;
+        unsigned long relations_len = relations.len;
+
+        mpz_t *dense_matrix = calloc(relations_len, sizeof(mpz_t));
+        for (unsigned long i = 0 ; i < relations_len ; i++) mpz_init(dense_matrix[i]);
+
+        mpz_t *res = calloc(relations_len, sizeof(mpz_t));
+        for (unsigned long i = 0 ; i < relations_len ; i++) mpz_init(res[i]);
+
+        unsigned char tmp_vec[relations_len];
+
+        build_dense_matrix(relations, primes, relations.len, primes.len+1, dense_matrix);
+
+        log_msg(logfile, "matrix built %lux%lu ; performing gaussian elimination...", relations.len, primes.len+1);
+
+        gaussian_elimination(relations.len, primes.len+1, dense_matrix, res);
+
+        for (unsigned long i = 0 ; i < relations.len ; i++)
+        {
+            if (row_is_zero(relations.len, primes.len+1, dense_matrix, i))
+            {
+                mpz_set_ui(x,1);
+                mpz_set_ui(y,1);
+
+                convert_to_vec(res[i], relations_len, tmp_vec);
+
+                build_sqrt(N,relations.len,tmp_vec,primes,x,y,relations,smooth_numbers);
+                mpz_sub(tmp,x,y);
+                mpz_add(tmp2,x,y);
+                mpz_gcd(tmp,tmp,N);
+                mpz_gcd(tmp2,tmp2,N);
+                char array1;
+                char array2;
+
+                if (mpz_cmp_ui(tmp,1) != 0 && mpz_cmp(tmp,N) != 0)
+                {
+                    if (mpz_probab_prime_p(tmp,100) > 0)
+                    {
+                        array1 = 'p';
+                    } else {array1 = 'C';}
+                    if (mpz_probab_prime_p(tmp2,100) > 0)
+                    {
+                        array2 = 'p';
+                    } else {array2 = 'C';}
+                    tm = *localtime(&(time_t){time(NULL)});
+                    log_blank_line(logfile);
+                    log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
+                    return 1;
+                }
+            }
+        }
+    }
+    else
+    {
+        dyn_array_classic bin_matrix,rel_weight;
+        init_classic(&bin_matrix);
+        init_classic(&rel_weight);
+        unsigned long nonzero;
+        double density;
+        unsigned long nb_lines;
+        build_sparse_matrix(&bin_matrix,relations,primes,&nonzero,&density,&nb_lines,&rel_weight);
+        unsigned long len = relations.len;
+        tm = *localtime(&(time_t){time(NULL)});
+        log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
+        unsigned long merge_bound = 5;
+        reduce_matrix(&bin_matrix,&relations,&smooth_numbers,len,N,&rel_weight,merge_bound);
+        count(logfile, bin_matrix, len, relations.len);
+        log_blank_line(logfile);
+        bin_matrix.size = bin_matrix.len;
+        bin_matrix.start = realloc(bin_matrix.start,bin_matrix.len*sizeof(unsigned long));
+
+        compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
+    }
+    
 
     if (logfile) fclose(logfile);
 }
