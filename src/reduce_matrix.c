@@ -355,7 +355,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
                 {
                     if (*(sorted.start+aa) > *(sorted.start)) *(sorted.start+aa) -= 1;
                 }
-                delete_classic_first(&sorted);
+                delete_classic(&sorted, 0);
             }
             else
             {
