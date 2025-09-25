@@ -9,19 +9,22 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
     unsigned long i;
     int flag;
 
+    mpz_t * restrict DM = dense_matrix;
+    mpz_t * restrict R = res;
+
     mpz_set_ui(tmp, 1);
 
     for (unsigned long i = 0 ; i < relations_len ; i++)
     {
         mpz_mul_2exp(tmp2, tmp, relations_len-i-1);
-        mpz_set(res[i], tmp2);
+        mpz_set(R[i], tmp2);
     }
 
     for (unsigned long j = 0 ; j < base_size ; j++)
     {
         i = j;
         
-        mpz_div_2exp(tmp, dense_matrix[i], j);
+        mpz_div_2exp(tmp, DM[i], j);
         mpz_set_ui(tmp2, 1);
         mpz_and(tmp, tmp, tmp2);
         flag = (mpz_cmp_ui(tmp, 0) == 0);
@@ -30,7 +33,7 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
         {
             i++;
 
-            mpz_div_2exp(tmp, dense_matrix[i], j);
+            mpz_div_2exp(tmp, DM[i], j);
             mpz_set_ui(tmp2, 1);
             mpz_and(tmp, tmp, tmp2);
             flag = (mpz_cmp_ui(tmp, 0) == 0);
@@ -40,27 +43,27 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
         {
             if (i != j) // If needed, permute the rows so that pivot is at the top
             {
-                mpz_set(tmp, dense_matrix[i]);
-                mpz_set(dense_matrix[i], dense_matrix[j]);
-                mpz_set(dense_matrix[j], tmp);
+                mpz_set(tmp, DM[i]);
+                mpz_set(DM[i], DM[j]);
+                mpz_set(DM[j], tmp);
 
-                mpz_set(tmp, res[i]);
-                mpz_set(res[i], res[j]);
-                mpz_set(res[j], tmp);
+                mpz_set(tmp, R[i]);
+                mpz_set(R[i], R[j]);
+                mpz_set(R[j], tmp);
             }
 
             for (unsigned long k = i+1 ; k < relations_len ; k++) // reduce all the lower rows so that coefficient dense_matrix[k][j] = 0
             {
-                mpz_div_2exp(tmp, dense_matrix[k], j);
+                mpz_div_2exp(tmp, DM[k], j);
                 mpz_set_ui(tmp2, 1);
                 mpz_and(tmp, tmp, tmp2);
                 flag = (mpz_cmp_ui(tmp, 1) == 0);
 
                 if (flag)
                 {
-                    mpz_xor(dense_matrix[k], dense_matrix[k], dense_matrix[j]);
+                    mpz_xor(DM[k], DM[k], DM[j]);
 
-                    mpz_xor(res[k], res[k], res[j]);
+                    mpz_xor(R[k], R[k], R[j]);
                 }
             }
         }

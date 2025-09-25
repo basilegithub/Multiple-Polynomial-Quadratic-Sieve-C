@@ -19,6 +19,7 @@ void myexp(mpf_t res, mpf_t x, mpf_t e);
 // Logarithm functions
 
 void my_int_log2(mpz_t n);
+unsigned long log2_ui(unsigned long n);
 void natural_log(mpf_t res, mpf_t x, mpf_t ln2, mpf_t e);
 void my_log10(mpf_t res, mpf_t x, mpf_t ln2, mpf_t ln10, mpf_t e);
 

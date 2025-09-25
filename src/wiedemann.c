@@ -42,6 +42,7 @@ void wiedemann(dyn_array_classic A, unsigned long n, unsigned char vec[n], unsig
         tmp[i] = 0;
         block[i] = 0;
     }
+    
     multiply(n,limit,A,vec,block);
     mpz_t P;
     unsigned long d = degree;

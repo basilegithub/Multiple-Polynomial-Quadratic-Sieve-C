@@ -135,7 +135,7 @@ void compute_b(mpf_t bound, mpf_t e, mpf_t ln2, mpf_t tmpf, mpf_t tmpf2, mpz_t b
     mpf_div_ui(tmpf,tmpf,2);
     myexp(tmpf,tmpf,e);
     mpf_mul_ui(tmpf,tmpf,10);
-    mpf_div_ui(tmpf,tmpf,32);
+    mpf_div_ui(tmpf,tmpf,60);
     mpz_set_f(b,tmpf);
 }
 
@@ -548,7 +548,7 @@ int main()
         mpz_div_ui(tmp2,tmp2,8);
         mpz_neg(tmp2,tmp2);
 
-        long double tmp_skipped = 10;
+        long double tmp_skipped = 15;
         for (unsigned long i = 0 ; i < prime_start ; i++)
         {
             mpf_set_ui(tmp_long1,logs[i]);
@@ -565,11 +565,8 @@ int main()
         unsigned long addup = dim/100;
         unsigned long prime = *(primes.start);
         unsigned long smooth_bound;
-        mpz_div_ui(tmp,n,2);
-        mpz_sqrt(tmp,tmp);
-        mpz_mul_ui(tmp,tmp,half);
-        my_int_log2(tmp);
-        smooth_bound = mpz_get_ui(tmp);
+
+        smooth_bound = (mpz_sizeinbase(n, 2) - 2) / 2 + log2_ui(half);
 
         time_t second1 = time(NULL);
         time_t second2;

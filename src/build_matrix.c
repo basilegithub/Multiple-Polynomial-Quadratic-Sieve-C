@@ -55,11 +55,15 @@ void build_dense_matrix(dyn_array relations, dyn_array_classic primes, unsigned 
     mpz_t tmp, tmp2;
     mpz_inits(tmp, tmp2, NULL);
 
+    mpz_t * restrict DM = dense_matrix;
+    mpz_t * restrict RELS = relations.start;
+    unsigned long * restrict PRIMES = primes.start;
+
     unsigned long tmp_char;
 
     for (unsigned long i = 0 ; i < relations_len ; i++)
     {
-        if (mpz_cmp_ui(*(relations.start+i), 0) < 0) mpz_set_ui(tmp, 1);
+        if (mpz_cmp_ui(*(RELS+i), 0) < 0) mpz_set_ui(tmp, 1);
         else mpz_set_ui(tmp, 0);
 
         for (unsigned long j = 0 ; j < primes.len ; j++)
@@ -67,18 +71,18 @@ void build_dense_matrix(dyn_array relations, dyn_array_classic primes, unsigned 
             mpz_mul_2exp(tmp, tmp, 1);
 
             tmp_char = 0;
-            mpz_set_ui(tmp2, *(primes.start+j));
+            mpz_set_ui(tmp2, *(PRIMES+j));
 
-            while (mpz_divisible_p(*(relations.start+i), tmp2))
+            while (mpz_divisible_p(*(RELS+i), tmp2))
             {
                 tmp_char ^= 1;
-                mpz_mul_ui(tmp2, tmp2, *(primes.start+j));
+                mpz_mul_ui(tmp2, tmp2, *(PRIMES+j));
             }
 
             mpz_add_ui(tmp, tmp, tmp_char);
         }
 
-        mpz_set(dense_matrix[i], tmp);
+        mpz_set(DM[i], tmp);
 
     }
     mpz_clears(tmp, tmp2, NULL);

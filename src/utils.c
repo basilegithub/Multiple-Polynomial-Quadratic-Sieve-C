@@ -97,6 +97,15 @@ void my_int_log2(mpz_t n)
     mpz_set_ui(n, mpz_sizeinbase(n, 2) - 1);
 }
 
+
+unsigned long log2_ui(unsigned long n) {
+    unsigned int log = 0;
+    while (n >>= 1) {
+        log++;
+    }
+    return log;
+}
+
 void natural_log(mpf_t res, mpf_t x, mpf_t ln2, mpf_t e)
 {
     mpz_t tmp;
@@ -181,7 +190,7 @@ int my_legendre(mpz_t n, unsigned long p)
     return 0;
 }
 
-void sqrt_mod(mpz_t n, unsigned long p, gmp_randstate_t state)
+void sqrt_mod(mpz_t n, const unsigned long p, gmp_randstate_t state)
 {
     mpz_t z,tmp,tmp2,P_value;
     unsigned long P;
@@ -240,10 +249,9 @@ void sqrt_mod(mpz_t n, unsigned long p, gmp_randstate_t state)
             if (mpz_cmp_ui(tmp_l,1) == 0) break;
             mpz_add_ui(m,m,1);
         }
-        mpz_ui_sub(tmp2,r,m);
-        mpz_sub_ui(tmp2,tmp2,1);
+        mpz_ui_sub(tmp2,r-1,m);
         mpz_powm(tmp_l,two_mpz,tmp2,P_value);
-        mpz_mul_ui(tmp2,tmp_l,2);
+        mpz_mul_2exp(tmp2, tmp_l, 1);
 
         mpz_powm(tmp2,generator,tmp2,tmp);
         mpz_mul(lambda,lambda,tmp2);
@@ -256,36 +264,44 @@ void sqrt_mod(mpz_t n, unsigned long p, gmp_randstate_t state)
     mpz_clears(z, tmp, tmp2, P_value, generator, lambda, omega, res, m, two_mpz, NULL);
 }
 
-void multiply(unsigned long n, unsigned long index, dyn_array_classic A, unsigned char b[n], unsigned char res[n])
+void multiply(const unsigned long n, const unsigned long index, const dyn_array_classic A, const unsigned char b[n], unsigned char res[n])
 {
-    unsigned char tmp[n];
+    unsigned char * restrict tmp = calloc(n, sizeof(unsigned char));
     unsigned long i = 0;
     unsigned char tmp2 = 0;
+
+    const unsigned long * restrict A_start = A.start;
+    const unsigned char * restrict B = b;
+    unsigned char * restrict RES = res;
+
     for (unsigned long k = 0 ; k < A.len ; k++)
     {
-        if (*(A.start+k) == index)
+        if (*(A_start+k) == index)
         {
             tmp[i] = tmp2;
             i++;
             tmp2 = 0;
         }
-        else tmp2 ^= b[*(A.start+k)];
+        else tmp2 ^= B[*(A_start+k)];
     }
-    for (unsigned long j = 0 ; j < i ; j++) res[j] = tmp[j];
-    for (unsigned long j = i ; j < n ; j++) res[j] = 0;
+    for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
+    for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
 }
 
-unsigned char dot_prod(unsigned long n, unsigned char lbd[n], unsigned char x[n])
+unsigned char dot_prod(const unsigned long n, const unsigned char lbd[n], const unsigned char x[n])
 {
+    const unsigned char * restrict LBD = lbd;
+    const unsigned char * restrict X = x;
+
     unsigned char tmp = 0;
     for (unsigned long i = 0 ; i < n ; i++)
     {
-        if (lbd[i]) tmp ^= x[i];
+        if (LBD[i]) tmp ^= X[i];
     }
     return tmp;
 }
 
-void poly_prod(mpz_t res, mpz_t poly_a, mpz_t poly_b)
+void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp_poly;
     mpz_init_set_ui(tmp_poly,0);
@@ -304,7 +320,7 @@ void poly_prod(mpz_t res, mpz_t poly_a, mpz_t poly_b)
     mpz_clears(tmp,tmp_poly,NULL);
 }
 
-void div_poly(mpz_t quotient, mpz_t remainder, mpz_t poly_a, mpz_t poly_b)
+void div_poly(mpz_t quotient, mpz_t remainder, const mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp, tmp2;
     mpz_init_set(tmp,poly_a); // problem is there
@@ -346,8 +362,15 @@ void div_poly(mpz_t quotient, mpz_t remainder, mpz_t poly_a, mpz_t poly_b)
     mpz_clears(tmp,tmp2,NULL);
 }
 
-void poly_eval(unsigned long n, mpz_t poly, unsigned char x[n], unsigned char res[n], dyn_array_classic A, unsigned long limit)
+void poly_eval(const unsigned long n, const mpz_t poly, const unsigned char x[n], unsigned char res[n], const dyn_array_classic A, const unsigned long limit)
 {
+unsigned int int_log2(unsigned long x) {
+    unsigned int log = 0;
+    while (x >>= 1) {
+        log++;
+    }
+    return log;
+}
     unsigned char tmp2[n];
     for (unsigned long i = 0 ; i < n ; i++) tmp2[i] = 0;
     mpz_t tmp;

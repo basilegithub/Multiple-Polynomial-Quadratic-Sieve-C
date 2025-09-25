@@ -40,6 +40,7 @@ void init2_len(dyn_array* array, unsigned long length);
 
 void append(dyn_array* array, mpz_t element);
 void append_only(dyn_array* array, mpz_t element);
+void append_only_si(dyn_array* array, signed long element);
 void append_block(dyn_array* array, unsigned long block_len, mpz_t tmp_vec[block_len]);
 void append_classic(dyn_array_classic* array, unsigned long element);
 void append_block_classic(dyn_array_classic* array, unsigned long block_len, unsigned long tmp_vec[block_len]);

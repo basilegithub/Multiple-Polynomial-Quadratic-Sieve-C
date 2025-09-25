@@ -26,7 +26,7 @@ void create_polynomial(mpz_t a, dyn_array* sol_needed, dyn_array* second_part, d
     int valid;
     mpz_t tmp2;
     mpz_init(tmp2);
-    for (unsigned long i = 0 ; i < 7 ; i++)
+    for (unsigned long i = 0 ; i < 6 ; i++)
     {
         tmp_where->len = 0;
         mpf_set(bound,target);
@@ -89,7 +89,7 @@ void create_polynomial(mpz_t a, dyn_array* sol_needed, dyn_array* second_part, d
             mpz_invert(tmp,a,tmp2);
             append_only(inverse_a,tmp);
             mpz_mul(tmp,tmp,*(roots->start+i));
-            mpz_mul_ui(tmp,tmp,2);
+            mpz_mul_2exp(tmp, tmp, 1);
             mpz_mod_ui(tmp,tmp,*(primes->start+i));
             append_classic(way_to_root,mpz_get_ui(tmp));
         }

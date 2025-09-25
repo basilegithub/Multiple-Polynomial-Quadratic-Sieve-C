@@ -120,7 +120,7 @@ void parallel_sieve(
             init2_len(&large_primes,batch_size);
             for (unsigned long i = 0 ; i < batch_size ; i++) mpz_set_ui(*(large_primes.start+i),1);
             init_len_classic(&is_smooth,batch_size);
-            for (unsigned long i = 0 ; i < batch_size ; i++) *(is_smooth.start+i) = 0;
+
             dyn_array batch_array;
             init2_len(&batch_array,2*batch_size-1);
             dyn_array block;
@@ -129,9 +129,11 @@ void parallel_sieve(
             double rate1, rate2;
             mpf_t tmpf;
             mpf_init(tmpf);
+            
             dyn_array tmp_block;
             init2_len(&tmp_block,half);
             reset(&tmp_block);
+
             mpz_t tmp_poly,tmp_poly2;
             mpz_init(tmp_poly);
             mpz_init(tmp_poly2);
@@ -152,14 +154,14 @@ void parallel_sieve(
                     while (mpz_cmp_ui(tmp_poly,0) > 0)
                     {
                         mpz_neg(*(solutions_needed.start+solutions_needed.len-1-ind),*(solutions_needed.start+solutions_needed.len-1-ind));
-                        mpz_div_ui(tmp_poly,tmp_poly,2);
+                        mpz_div_2exp(tmp_poly, tmp_poly, 1);
                         ind++;
                     }
                     mpz_add_ui(poly_index,poly_index,1);
                     mpz_add_ui(tmppolyindex,tmppolyindex,1);
                 }
                 CRT(tmp_poly,&solutions_needed,poly_a,&second_part);
-                mpz_div_ui(tmp_poly2,poly_a,2);
+                mpz_div_2exp(tmp_poly2, poly_a, 1);
                 if (mpz_cmp(tmp_poly,tmp_poly2) > 0) mpz_sub(tmp_poly,poly_a,tmp_poly);
                 mpz_set(poly_b,tmp_poly);
                 mpz_mul(tmp_poly,tmp_poly,tmp_poly);
@@ -243,7 +245,7 @@ void parallel_sieve(
                                 mpf_set_ui(var1,objective);
                                 mpf_mul(var1,var1,nb_large);
                                 mpf_mul(var1,var1,tmpf);
-                                mpf_mul_ui(var1,var1,2);
+                                mpf_mul_2exp(var1, var1, 1);
 
                                 mpf_set_d(var2,rate1);
                                 mpf_mul(var2,var2,nb_large);

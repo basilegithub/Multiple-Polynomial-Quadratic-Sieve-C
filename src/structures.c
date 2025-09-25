@@ -74,6 +74,12 @@ void append_only(dyn_array* array, mpz_t element)
     array->len++;
 }
 
+void append_only_si(dyn_array* array, signed long element)
+{
+    mpz_set_si(*(array->start+array->len), element);
+    array->len++;
+}
+
 void append_block(dyn_array* array, unsigned long block_len, mpz_t tmp_vec[block_len])
 {
     if (array->size <= array->len + block_len)
