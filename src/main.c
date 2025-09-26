@@ -132,10 +132,10 @@ void compute_b(mpf_t bound, mpf_t e, mpf_t ln2, mpf_t tmpf, mpf_t tmpf2, mpz_t b
     natural_log(tmpf2,tmpf,ln2,e);
     mpf_mul(tmpf,tmpf,tmpf2);
     mpf_sqrt(tmpf,tmpf);
-    mpf_div_ui(tmpf,tmpf,2);
+    mpf_div_2exp(tmpf, tmpf, 1);
     myexp(tmpf,tmpf,e);
     mpf_mul_ui(tmpf,tmpf,10);
-    mpf_div_ui(tmpf,tmpf,60);
+    mpf_div_ui(tmpf,tmpf,80);
     mpz_set_f(b,tmpf);
 }
 
@@ -213,7 +213,7 @@ void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
             logs[i] = mpz_get_ui(last_log);
             continue;
         }
-        mpz_mul_ui(tmp,last,2);
+        mpz_mul_2exp(tmp, last, 1);
         if (mpz_cmp_ui(tmp,*(primes.start+i)) >= 0)
         {
             mpz_add_ui(tmp,last_log,1);
@@ -223,8 +223,8 @@ void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
         while (mpz_cmp_ui(tmp,*(primes.start+i)) == -1)
         {
             mpz_add_ui(last_log,last_log,1);
-            mpz_mul_ui(last,last,2);
-            mpz_mul_ui(tmp,last,2);
+            mpz_mul_2exp(last, last, 1);
+            mpz_mul_2exp(tmp, last, 1);
         }
         logs[i] = mpz_get_ui(last_log);
     }
@@ -311,9 +311,9 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
                 degree += mpz_get_ui(tmp);
                 while (mpz_divisible_ui_p(poly_res,2))
                 {
-                    mpz_div_ui(poly_res,poly_res,2);
+                    mpz_div_2exp(poly_res, poly_res, 1);
                     tmp_long++;
-                    mpz_mul_ui(poly_shift,poly_shift,2);
+                    mpz_mul_2exp(poly_shift, poly_shift, 1);
                 }
                 poly_prod(poly,poly,poly_res);
                 poly_eval(relations.len,poly_res,null_space,null_space,bin_matrix,len);
@@ -548,7 +548,7 @@ int main()
         mpz_div_ui(tmp2,tmp2,8);
         mpz_neg(tmp2,tmp2);
 
-        long double tmp_skipped = 15;
+        long double tmp_skipped = 30;
         for (unsigned long i = 0 ; i < prime_start ; i++)
         {
             mpf_set_ui(tmp_long1,logs[i]);
