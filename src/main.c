@@ -706,13 +706,15 @@ int main()
 
 	mpz_clear(prod_primes);
 	tm = *localtime(&(time_t){time(NULL)});
+
     unsigned long relations_len = relations.len;
     reduce_relations(&relations,&smooth_numbers,&primes,n);
     log_blank_line(logfile);
-    log_msg(logfile, "Sieving done, reducing set of relations from %lu to %lu, building matrix...", relations_len, relations.len);
+    log_msg(logfile, "Sieving done, reduced set of relations from %lu to %lu, building matrix...", relations_len, relations.len);
 
     if (flag_gaussian_elimination)
     {
+
         mpz_t x,y;
         mpz_init(x);
         mpz_init(y);

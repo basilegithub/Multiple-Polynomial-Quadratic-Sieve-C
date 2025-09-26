@@ -1,4 +1,5 @@
 #include <gmp.h>
+#include <stdio.h>
 
 void gaussian_elimination(unsigned long relations_len, unsigned long base_size, mpz_t *dense_matrix, mpz_t *res)
 {
@@ -20,9 +21,11 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
         mpz_set(R[i], tmp2);
     }
 
+    unsigned long index = 0;
+
     for (unsigned long j = 0 ; j < base_size ; j++)
     {
-        i = j;
+        i = index;
         
         mpz_div_2exp(tmp, DM[i], j);
         mpz_set_ui(tmp2, 1);
@@ -41,15 +44,15 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
 
         if (i < relations_len && !flag) // We have found the pivot row
         {
-            if (i != j) // If needed, permute the rows so that pivot is at the top
+            if (i != index) // If needed, permute the rows so that pivot is at the top
             {
                 mpz_set(tmp, DM[i]);
-                mpz_set(DM[i], DM[j]);
-                mpz_set(DM[j], tmp);
+                mpz_set(DM[i], DM[index]);
+                mpz_set(DM[index], tmp);
 
                 mpz_set(tmp, R[i]);
-                mpz_set(R[i], R[j]);
-                mpz_set(R[j], tmp);
+                mpz_set(R[i], R[index]);
+                mpz_set(R[index], tmp);
             }
 
             for (unsigned long k = i+1 ; k < relations_len ; k++) // reduce all the lower rows so that coefficient dense_matrix[k][j] = 0
@@ -61,14 +64,13 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
 
                 if (flag)
                 {
-                    mpz_xor(DM[k], DM[k], DM[j]);
-
-                    mpz_xor(R[k], R[k], R[j]);
+                    mpz_xor(DM[k], DM[k], DM[index]);
+                    mpz_xor(R[k], R[k], R[index]);
                 }
             }
+            index++;
         }
     }
-
     mpz_clears(tmp, tmp2, NULL);
 }
 
