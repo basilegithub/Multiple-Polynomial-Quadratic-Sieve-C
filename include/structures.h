@@ -101,7 +101,7 @@ int is_present_ui(dyn_array* array, unsigned long param);
 
 // 1D Hashmap functions
 
-void hashmap_1d_create(Hashmap_1D *graph, size_t buckets);
+void hashmap_1d_create(Hashmap_1D *graph, const size_t buckets);
 size_t hash_1d_mpz_strong(const Hashmap_1D *graph, const mpz_t key);
 void hashmap_1d_put(Hashmap_1D *graph, const mpz_t key, const mpz_t value);
 bool hashmap_1d_get(Hashmap_1D *graph, const mpz_t key, mpz_t output);
@@ -109,6 +109,11 @@ void hashmap_1d_free(Hashmap_1D *graph);
 
 // 2D partial_relations Hashmap functions
 
-
+void hashmap_2d_create(Hashmap_PartialRelation *partial_relations, const size_t buckets);
+void hashmap_2d_compute_key(const unsigned long small_p, const unsigned long big_p, mpz_t key);
+size_t hash_2d_mpz_strong(const Hashmap_PartialRelation *partial_relations, const mpz_t key);
+void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, const PartialRelation value);
+bool hashmap_2d_get(Hashmap_PartialRelation *graph, const unsigned long small_p, const unsigned long big_p, PartialRelation output);
+void hashmap_2d_free(Hashmap_PartialRelation *graph);
 
 #endif // STRUCTURE_H

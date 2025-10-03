@@ -281,21 +281,22 @@ int is_present_ui(dyn_array* array, unsigned long param)
 
 // 1D Hashmap functions
 
-void hashmap_1d_create(Hashmap_1D *graph, const size_t buckets) {
-    graph->buckets = buckets;
-    graph->table = calloc(graph->buckets, sizeof(HashNode1D*));
-    if (!graph->table) {
+void hashmap_1d_create(Hashmap_1D *hashmap, const size_t buckets)
+{
+    hashmap->buckets = buckets;
+    hashmap->table = calloc(hashmap->buckets, sizeof(HashNode1D*));
+    if (!hashmap->table) {
         exit(EXIT_FAILURE);
     }
 }
 
-size_t hash_1d_mpz_strong(const Hashmap_1D *graph, const mpz_t key) {
-    return (size_t) mpz_fdiv_ui(key, graph->buckets);
+size_t hash_1d_mpz_strong(const Hashmap_1D *hashmap, const mpz_t key) {
+    return (size_t) mpz_fdiv_ui(key, hashmap->buckets);
 }
 
-void hashmap_1d_put(Hashmap_1D *graph, const mpz_t key, const mpz_t value) {
-    size_t index = hash_mpz_strong(graph, key);
-    HashNode1D *node = graph->table[index];
+void hashmap_1d_put(Hashmap_1D *hashmap, const mpz_t key, const mpz_t value) {
+    size_t index = hash_1d_mpz_strong(hashmap, key);
+    HashNode1D *node = hashmap->table[index];
 
     while (node) {
         if (mpz_cmp(node->key, key) == 0) {
@@ -309,13 +310,13 @@ void hashmap_1d_put(Hashmap_1D *graph, const mpz_t key, const mpz_t value) {
     node = malloc(sizeof(HashNode1D));
     mpz_init_set(node->key, key);
     mpz_init_set(node->value, value);
-    node->next = graph->table[index];
-    graph->table[index] = node;
+    node->next = hashmap->table[index];
+    hashmap->table[index] = node;
 }
 
-bool hashmap_1d_get(Hashmap_1D *graph, const mpz_t key, mpz_t output) {
-    size_t index = hash_mpz_strong(graph, key);
-    HashNode1D *node = graph->table[index];
+bool hashmap_1d_get(Hashmap_1D *hashmap, const mpz_t key, mpz_t output) {
+    size_t index = hash_1d_mpz_strong(hashmap, key);
+    HashNode1D *node = hashmap->table[index];
 
     while (node) {
         if (mpz_cmp(node->key, key) == 0) {
@@ -328,9 +329,9 @@ bool hashmap_1d_get(Hashmap_1D *graph, const mpz_t key, mpz_t output) {
     return false; // not found
 }
 
-void hashmap_1d_free(Hashmap_1D *graph) {
-    for (size_t i = 0; i < graph->buckets; i++) {
-        HashNode1D *node = graph->table[i];
+void hashmap_1d_free(Hashmap_1D *hashmap) {
+    for (size_t i = 0; i < hashmap->buckets; i++) {
+        HashNode1D *node = hashmap->table[i];
         while (node) {
             HashNode1D *next = node->next;
             mpz_clear(node->key);
@@ -339,7 +340,120 @@ void hashmap_1d_free(Hashmap_1D *graph) {
             node = next;
         }
     }
-    free(graph->table);
-    graph->table = NULL;
-    graph->buckets = 0;
+    free(hashmap->table);
+    hashmap->table = NULL;
+    hashmap->buckets = 0;
+}
+
+// 2D Hashmap functions
+
+void hashmap_2d_create(Hashmap_PartialRelation *partial_relations, const size_t buckets)
+{
+    partial_relations->buckets = buckets;
+    partial_relations->table = calloc(partial_relations->buckets, sizeof(HashNodePartialRelation*));
+    if (!partial_relations->table) {
+        exit(EXIT_FAILURE);
+    }
+}
+
+void hashmap_2d_compute_key(const unsigned long small_p, const unsigned long big_p, mpz_t key)
+{
+    mpz_t big_mpz, pow10;
+    mpz_init_set_ui(big_mpz, big_p);
+    mpz_init(pow10);
+
+    // Get number of decimal digits of big_p
+    size_t digits = mpz_sizeinbase(big_mpz, 10);
+
+    // pow10 = 10^digits
+    mpz_ui_pow_ui(pow10, 10, digits);
+
+    // key = small_p * pow10 + big_p
+    mpz_mul_ui(key, pow10, small_p);
+    mpz_add(key, key, big_mpz);
+
+    mpz_clears(big_mpz, pow10, NULL);
+}
+
+size_t hash_2d_mpz_strong(const Hashmap_PartialRelation *partial_relations, const mpz_t key) {
+    return (size_t) mpz_fdiv_ui(key, partial_relations->buckets);
+}
+
+void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, const PartialRelation value)
+{
+    mpz_t key;
+    mpz_init(key);
+    hashmap_2d_compute_key(small_p, big_p, key);
+    size_t index = hash_2d_mpz_strong(partial_relations, key);
+
+    mpz_clear(key);
+
+    HashNodePartialRelation *node = partial_relations->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            mpz_set(node->value->x, value.x); // update existing
+            mpz_set(node->value->y, value.y); // update existing
+            mpz_set(node->value->small_p, value.small_p); // update existing
+            mpz_set(node->value->big_p, value.big_p); // update existing
+            return;
+        }
+        node = node->next;
+    }
+
+    // not found → insert
+    node = malloc(sizeof(HashNodePartialRelation));
+    mpz_init_set(node->key, key);
+
+    mpz_set(node->value->x, value.x);
+    mpz_set(node->value->y, value.y);
+    mpz_set(node->value->small_p, value.small_p);
+    mpz_set(node->value->big_p, value.big_p);
+
+    node->next = partial_relations->table[index];
+    partial_relations->table[index] = node;
+}
+
+bool hashmap_2d_get(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, PartialRelation output)
+{
+     mpz_t key;
+    mpz_init(key);
+    hashmap_2d_compute_key(small_p, big_p, key);
+    size_t index = hash_2d_mpz_strong(partial_relations, key);
+
+    mpz_clear(key);
+    
+    HashNodePartialRelation *node = partial_relations->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            mpz_set(output.x, node->value->x);
+            mpz_set(output.y, node->value->y);
+            mpz_set(output.small_p, node->value->small_p);
+            mpz_set(output.big_p, node->value->big_p);
+            return true;  // found
+        }
+        node = node->next;
+    }
+
+    return false; // not found
+}
+
+void hashmap_2d_free(Hashmap_PartialRelation *partial_relations) {
+    for (size_t i = 0; i < partial_relations->buckets; i++) {
+        HashNodePartialRelation *node = partial_relations->table[i];
+        while (node) {
+            HashNodePartialRelation *next = node->next;
+            mpz_clear(node->key);
+            mpz_clear(node->value->x);
+            mpz_clear(node->value->y);
+            mpz_clear(node->value->small_p);
+            mpz_clear(node->value->big_p);
+            free(node);
+            node = next;
+        }
+    }
+    free(partial_relations->table);
+    partial_relations->table = NULL;
+    partial_relations->buckets = 0;
 }
