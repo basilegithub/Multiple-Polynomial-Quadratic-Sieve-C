@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdbool.h>
 #include <gmp.h>
 
 #include "structures.h"
@@ -30,13 +31,13 @@ void sqrt_mod(mpz_t n, unsigned long p, gmp_randstate_t state);
 
 // Linear algebra functions
 
-void multiply(unsigned long n, unsigned long index, dyn_array_classic A, unsigned char b[n], unsigned char res[n]);
-unsigned char dot_prod(unsigned long n, unsigned char lbd[n], unsigned char x[n]);
+void multiply(unsigned long n, unsigned long index, dyn_array_classic A, bool b[n], bool res[n]);
+bool dot_prod(unsigned long n, bool lbd[n], bool x[n]);
 
 // Wiedemann polynomial functions
 
 void poly_prod(mpz_t res, mpz_t poly_a, mpz_t poly_b);
 void div_poly(mpz_t quotient, mpz_t remainder, mpz_t poly_a, mpz_t poly_b);
-void poly_eval(unsigned long n, mpz_t poly, unsigned char x[n], unsigned char res[n], dyn_array_classic A, unsigned long limit);
+void poly_eval(unsigned long n, mpz_t poly, bool x[n], bool res[n], dyn_array_classic A, unsigned long limit);
 
 #endif // UTILS_H

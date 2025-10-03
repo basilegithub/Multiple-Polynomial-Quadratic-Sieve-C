@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 #include <time.h>
 #include <omp.h>
@@ -237,7 +238,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
     mpz_t x,y;
     mpz_init(x);
     mpz_init(y);
-    unsigned char null_space[relations.len];
+    bool null_space[relations.len];
     mpz_t poly;
     mpz_init_set_ui(poly,1);
     unsigned long tmp_long = 0;
@@ -248,10 +249,10 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
     mpz_t poly_shift;
     mpz_init_set_ui(poly_shift,1);
 
-    int block_len = 8; // less or equal to 8 for unsigned char to work
-    unsigned char michel;
-    unsigned char tmp_array[relations.len];
-    unsigned char tmp_vec[relations.len];
+    int block_len = 8; // less or equal to 8 for bool to work
+    bool flag_update_minimal_poly;
+    bool tmp_array[relations.len];
+    bool tmp_vec[relations.len];
     unsigned long degree = 0;
     while (1)
     {
@@ -270,7 +271,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
         if (mpz_cmp_ui(poly,1) > 0) poly_eval(relations.len,poly,null_space,null_space,bin_matrix,len);
         for (unsigned long i = 0 ; i < block_len ; i++)
         {
-            michel = 1;
+            flag_update_minimal_poly = 1;
             for (unsigned long j = 0 ; j < relations.len ; j++)
             {
                 tmp_array[j] = (null_space[j]>>i)&1;
@@ -300,10 +301,10 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
                 {
                     if (tmp_array[j]) flag = 0;
                 }
-                if (flag) michel = 0;
+                if (flag) flag_update_minimal_poly = 0;
                 for (unsigned long j = 0 ; j < relations.len ; j++) tmp_array[j] = tmp_vec[j];
             }
-            if (michel)
+            if (flag_update_minimal_poly)
             {
                 wiedemann(bin_matrix,relations.len,tmp_array,len,poly_res,degree);
                 mpz_set(tmp,poly_res);
@@ -321,7 +322,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
                 if (mpz_cmp_ui(poly_shift,1) > 0) poly_eval(relations.len,poly_shift,tmp_array,tmp_array,bin_matrix,len);
             }
             tm = *localtime(&(time_t){time(NULL)});
-            if (michel) log_msg(logfile, "Minimal polynomial updated, kernel vector found");
+            if (flag_update_minimal_poly) log_msg(logfile, "Minimal polynomial updated, kernel vector found");
             else log_msg(logfile, "Kernel vector found");
             mpz_set_ui(x,1);
             mpz_set_ui(y,1);
@@ -352,7 +353,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
     }
 }
 
-void convert_to_vec(mpz_t embedding, unsigned long relations_len, unsigned char tmp_vec[relations_len])
+void convert_to_vec(mpz_t embedding, unsigned long relations_len, bool tmp_vec[relations_len])
 {
     mpz_t tmp, tmp2;
     mpz_inits(tmp, tmp2, NULL);
@@ -361,7 +362,7 @@ void convert_to_vec(mpz_t embedding, unsigned long relations_len, unsigned char 
     for (unsigned long i = 0 ; i < relations_len ; i++)
     {
         mpz_and(tmp, embedding, tmp2);
-        tmp_vec[relations_len-i-1] = (unsigned char) mpz_get_d(tmp);
+        tmp_vec[relations_len-i-1] = (bool) mpz_get_ui(tmp);
 
         mpz_div_2exp(embedding, embedding, 1);
     }
@@ -728,7 +729,7 @@ int main()
         mpz_t *res = calloc(relations_len, sizeof(mpz_t));
         for (unsigned long i = 0 ; i < relations_len ; i++) mpz_init(res[i]);
 
-        unsigned char tmp_vec[relations_len];
+        bool tmp_vec[relations_len];
 
         build_dense_matrix(relations, primes, relations.len, primes.len+1, dense_matrix);
 

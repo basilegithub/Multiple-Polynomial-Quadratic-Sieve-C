@@ -1,9 +1,10 @@
 #include <gmp.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "structures.h"
 
-void build_sqrt(mpz_t n,unsigned long dim, unsigned char vector[dim], dyn_array_classic primes, mpz_t x, mpz_t y, dyn_array relations, dyn_array smooth)
+void build_sqrt(mpz_t n,unsigned long dim, bool vector[dim], dyn_array_classic primes, mpz_t x, mpz_t y, dyn_array relations, dyn_array smooth)
 {
     mpz_t tmp,tmp2;
     mpz_init(tmp);

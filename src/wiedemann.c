@@ -1,5 +1,6 @@
 #include <gmp.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "structures.h"
 #include "utils.h"
@@ -33,10 +34,10 @@ void poly_anul(mpz_t D, mpz_t B, unsigned long m)
     mpz_clears(A, C, E, Q, R, tmp, NULL);
 }
 
-void wiedemann(dyn_array_classic A, unsigned long n, unsigned char vec[n], unsigned long limit, mpz_t poly_res, unsigned long degree)
+void wiedemann(dyn_array_classic A, unsigned long n, bool vec[n], unsigned long limit, mpz_t poly_res, unsigned long degree)
 {
-    unsigned char tmp[n];
-    unsigned char block[n];
+    bool tmp[n];
+    bool block[n];
     for (unsigned long i = 0 ; i < n ; i++)
     {
         tmp[i] = 0;
@@ -49,11 +50,11 @@ void wiedemann(dyn_array_classic A, unsigned long n, unsigned char vec[n], unsig
     mpz_init_set_ui(P,1);
     mpz_t sequence;
     mpz_init(sequence);
-    unsigned char lbd[n];
-    int michel = 1;
+    bool lbd[n];
+    bool flag = true;
     mpz_t pi;
     mpz_init(pi);
-    while (michel)
+    while (flag)
     {
         for (unsigned long i = 0 ; i < n ; i++)
         {
@@ -76,10 +77,10 @@ void wiedemann(dyn_array_classic A, unsigned long n, unsigned char vec[n], unsig
         my_int_log2(pi);
         d += mpz_get_ui(pi);
 
-        michel = 0;
-        for (unsigned long i = 0 ; i < n && !michel; i++)
+        flag = false;
+        for (unsigned long i = 0 ; i < n && !flag; i++)
         {
-            if (block[i]) michel = 1;
+            if (block[i]) flag = true;
         }
     }
     mpz_set(poly_res,P);

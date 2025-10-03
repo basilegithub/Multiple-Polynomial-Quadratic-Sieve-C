@@ -1,4 +1,5 @@
 #include <gmp.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "structures.h"
@@ -96,7 +97,6 @@ void my_int_log2(mpz_t n)
 {
     mpz_set_ui(n, mpz_sizeinbase(n, 2) - 1);
 }
-
 
 unsigned long log2_ui(unsigned long n) {
     unsigned int log = 0;
@@ -264,15 +264,15 @@ void sqrt_mod(mpz_t n, const unsigned long p, gmp_randstate_t state)
     mpz_clears(z, tmp, tmp2, P_value, generator, lambda, omega, res, m, two_mpz, NULL);
 }
 
-void multiply(const unsigned long n, const unsigned long index, const dyn_array_classic A, const unsigned char b[n], unsigned char res[n])
+void multiply(const unsigned long n, const unsigned long index, const dyn_array_classic A, const bool b[n], bool res[n])
 {
-    unsigned char * restrict tmp = calloc(n, sizeof(unsigned char));
+    bool * restrict tmp = calloc(n, sizeof(bool));
     unsigned long i = 0;
     unsigned char tmp2 = 0;
 
     const unsigned long * restrict A_start = A.start;
-    const unsigned char * restrict B = b;
-    unsigned char * restrict RES = res;
+    const bool * restrict B = b;
+    bool * restrict RES = res;
 
     for (unsigned long k = 0 ; k < A.len ; k++)
     {
@@ -288,12 +288,12 @@ void multiply(const unsigned long n, const unsigned long index, const dyn_array_
     for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
 }
 
-unsigned char dot_prod(const unsigned long n, const unsigned char lbd[n], const unsigned char x[n])
+bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
 {
-    const unsigned char * restrict LBD = lbd;
-    const unsigned char * restrict X = x;
+    const bool * restrict LBD = lbd;
+    const bool * restrict X = x;
 
-    unsigned char tmp = 0;
+    bool tmp = 0;
     for (unsigned long i = 0 ; i < n ; i++)
     {
         if (LBD[i]) tmp ^= X[i];
@@ -362,17 +362,10 @@ void div_poly(mpz_t quotient, mpz_t remainder, const mpz_t poly_a, const mpz_t p
     mpz_clears(tmp,tmp2,NULL);
 }
 
-void poly_eval(const unsigned long n, const mpz_t poly, const unsigned char x[n], unsigned char res[n], const dyn_array_classic A, const unsigned long limit)
+void poly_eval(const unsigned long n, const mpz_t poly, const bool x[n], bool res[n], const dyn_array_classic A, const unsigned long limit)
 {
-unsigned int int_log2(unsigned long x) {
-    unsigned int log = 0;
-    while (x >>= 1) {
-        log++;
-    }
-    return log;
-}
-    unsigned char tmp2[n];
-    for (unsigned long i = 0 ; i < n ; i++) tmp2[i] = 0;
+    bool tmp2[n];
+    for (unsigned long i = 0 ; i < n ; i++) tmp2[i] = false;
     mpz_t tmp;
     mpz_init_set(tmp,poly);
     my_int_log2(tmp);

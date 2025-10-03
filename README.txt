@@ -42,7 +42,7 @@ Wiedemann algorithm:
 
 ##### running the algortihm #####
 
-You just need to run the build/MPQS_v_1_0_0.exe program in a terminal.
+You just need to run the build/MPQS_v_2_0_1.exe program in a terminal.
 The program will ask you to input the number you want to factor.
 
 You HAVE to have a "config.txt" file in a "config" folder located in the same folder in which you are running the .exe file.
