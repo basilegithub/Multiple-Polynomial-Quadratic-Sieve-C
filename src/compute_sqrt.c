@@ -9,35 +9,35 @@ void build_sqrt(mpz_t n,unsigned long dim, bool vector[dim], dyn_array_classic p
     mpz_t tmp,tmp2;
     mpz_init(tmp);
     mpz_init(tmp2);
-    mpz_set_ui(y,1);
-    mpz_set_ui(x,1);
+    mpz_set_ui(y, 1);
+    mpz_set_ui(x, 1);
     unsigned long vector_y[primes.len];
-    for (unsigned long i = 0 ; i < primes.len ; i++) vector_y[i] = 0;
-    for (unsigned long e = 0 ; e < dim ; e++)
+    for (size_t i = 0 ; i < primes.len ; i++) vector_y[i] = 0;
+    for (size_t e = 0 ; e < dim ; e++)
     {
         if (vector[e])
         {
-            mpz_mul(x,x,*(smooth.start+e));
-            mpz_mod(x,x,n);
-            for (unsigned long i = 0 ; i < primes.len ; i++)
+            mpz_mul(x, x, *(smooth.start+e));
+            mpz_mod(x, x, n);
+            for (size_t i = 0 ; i < primes.len ; i++)
             {
-                mpz_set_ui(tmp,*(primes.start+i));
-                while(mpz_divisible_p(*(relations.start+e),tmp))
+                mpz_set_ui(tmp, *(primes.start+i));
+                while(mpz_divisible_p(*(relations.start+e), tmp))
                 {
                     vector_y[i]++;
-                    mpz_mul_ui(tmp,tmp,*(primes.start+i));
+                    mpz_mul_ui(tmp, tmp, *(primes.start+i));
                 }
             }
         }
     }
-    for (unsigned long k = 0 ; k < primes.len ; k++)
+    for (size_t k = 0 ; k < primes.len ; k++)
     {
-        mpz_set_ui(tmp2,vector_y[k]);
-        mpz_div_ui(tmp2,tmp2,2);
-        mpz_set_ui(tmp,*(primes.start+k));
-        mpz_powm(tmp,tmp,tmp2,n);
-        mpz_mul(y,y,tmp);
-        mpz_mod(y,y,n);
+        mpz_set_ui(tmp2, vector_y[k]);
+        mpz_div_2exp(tmp2, tmp2, 1);
+        mpz_set_ui(tmp, *(primes.start+k));
+        mpz_powm(tmp, tmp, tmp2, n);
+        mpz_mul(y, y, tmp);
+        mpz_mod(y, y, n);
     }
-    mpz_clears(tmp,tmp2,NULL);
+    mpz_clears(tmp, tmp2, NULL);
 }

@@ -1,7 +1,9 @@
 #include <gmp.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "structures.h"
+#include "utils.h"
 
 void init(dyn_array* array)
 {
@@ -65,7 +67,7 @@ void append(dyn_array* array, mpz_t element)
         array->start = realloc(array->start, sizeof(mpz_t)*(array->size));
     }
     mpz_init_set(*(array->start+array->len), element);
-    array->len++;
+    array->len++;int mpz_equal(const mpz_t a, const mpz_t b);
 }
 
 void append_only(dyn_array* array, mpz_t element)
@@ -275,4 +277,69 @@ int is_present_ui(dyn_array* array, unsigned long param)
     }
     if (mpz_cmp(*(array->start + tmp), element) == 0) return 1;
     return 0;
+}
+
+// 1D Hashmap functions
+
+void hashmap_1d_create(Hashmap_1D *graph, const size_t buckets) {
+    graph->buckets = buckets;
+    graph->table = calloc(graph->buckets, sizeof(HashNode1D*));
+    if (!graph->table) {
+        exit(EXIT_FAILURE);
+    }
+}
+
+size_t hash_1d_mpz_strong(const Hashmap_1D *graph, const mpz_t key) {
+    return (size_t) mpz_fdiv_ui(key, graph->buckets);
+}
+
+void hashmap_1d_put(Hashmap_1D *graph, const mpz_t key, const mpz_t value) {
+    size_t index = hash_mpz_strong(graph, key);
+    HashNode1D *node = graph->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            mpz_set(node->value, value); // update existing
+            return;
+        }
+        node = node->next;
+    }
+
+    // not found → insert
+    node = malloc(sizeof(HashNode1D));
+    mpz_init_set(node->key, key);
+    mpz_init_set(node->value, value);
+    node->next = graph->table[index];
+    graph->table[index] = node;
+}
+
+bool hashmap_1d_get(Hashmap_1D *graph, const mpz_t key, mpz_t output) {
+    size_t index = hash_mpz_strong(graph, key);
+    HashNode1D *node = graph->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            mpz_set(output, node->value);
+            return true;  // found
+        }
+        node = node->next;
+    }
+
+    return false; // not found
+}
+
+void hashmap_1d_free(Hashmap_1D *graph) {
+    for (size_t i = 0; i < graph->buckets; i++) {
+        HashNode1D *node = graph->table[i];
+        while (node) {
+            HashNode1D *next = node->next;
+            mpz_clear(node->key);
+            mpz_clear(node->value);
+            free(node);
+            node = next;
+        }
+    }
+    free(graph->table);
+    graph->table = NULL;
+    graph->buckets = 0;
 }

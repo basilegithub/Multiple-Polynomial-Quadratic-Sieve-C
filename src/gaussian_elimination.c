@@ -16,7 +16,7 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
 
     mpz_set_ui(tmp, 1);
 
-    for (unsigned long i = 0 ; i < relations_len ; i++)
+    for (size_t i = 0 ; i < relations_len ; i++)
     {
         mpz_mul_2exp(tmp2, tmp, relations_len-i-1);
         mpz_set(R[i], tmp2);
@@ -24,14 +24,14 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
 
     unsigned long index = 0;
 
-    for (unsigned long j = 0 ; j < base_size ; j++)
+    for (size_t j = 0 ; j < base_size ; j++)
     {
         i = index;
         
         mpz_div_2exp(tmp, DM[i], j);
         mpz_set_ui(tmp2, 1);
         mpz_and(tmp, tmp, tmp2);
-        flag = (mpz_cmp_ui(tmp, 0) == 0);
+        flag = (!mpz_cmp_ui(tmp, 0));
 
         while (i < relations_len && flag)
         {
@@ -40,7 +40,7 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
             mpz_div_2exp(tmp, DM[i], j);
             mpz_set_ui(tmp2, 1);
             mpz_and(tmp, tmp, tmp2);
-            flag = (mpz_cmp_ui(tmp, 0) == 0);
+            flag = (!mpz_cmp_ui(tmp, 0));
         }
 
         if (i < relations_len && !flag) // We have found the pivot row
@@ -56,12 +56,12 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
                 mpz_set(R[index], tmp);
             }
 
-            for (unsigned long k = i+1 ; k < relations_len ; k++) // reduce all the lower rows so that coefficient dense_matrix[k][j] = 0
+            for (size_t k = i+1 ; k < relations_len ; k++) // reduce all the lower rows so that coefficient dense_matrix[k][j] = 0
             {
                 mpz_div_2exp(tmp, DM[k], j);
                 mpz_set_ui(tmp2, 1);
                 mpz_and(tmp, tmp, tmp2);
-                flag = (mpz_cmp_ui(tmp, 1) == 0);
+                flag = (!mpz_cmp_ui(tmp, 1));
 
                 if (flag)
                 {
@@ -75,7 +75,7 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
     mpz_clears(tmp, tmp2, NULL);
 }
 
-bool row_is_zero(unsigned long relations_len, unsigned long base_size, mpz_t *dense_matrix, unsigned long row_index)
+bool row_is_zero(unsigned long relations_len, unsigned long base_size, mpz_t *dense_matrix, size_t row_index)
 {
-    return ( (bool)!mpz_cmp_ui(dense_matrix[row_index], 0));
+    return ((bool) !mpz_cmp_ui(dense_matrix[row_index], 0));
 }

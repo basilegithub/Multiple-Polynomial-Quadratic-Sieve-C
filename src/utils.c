@@ -30,7 +30,7 @@ void recursive_exp(mpf_t res, mpz_t pow, mpf_t e)
         mpf_init(tmpf);
         mpz_t tmp;
         mpz_init(tmp);
-        if (mpz_divisible_ui_p(pow, 2))
+        if (mpz_even_p(pow))
         {
             mpz_div_ui(tmp, pow, 2);
             recursive_exp(tmpf, tmp, e);
@@ -264,6 +264,10 @@ void sqrt_mod(mpz_t n, const unsigned long p, gmp_randstate_t state)
     mpz_clears(z, tmp, tmp2, P_value, generator, lambda, omega, res, m, two_mpz, NULL);
 }
 
+int mpz_equal(const mpz_t a, const mpz_t b) {
+    return (mpz_cmp(a, b));
+}
+
 void multiply(const unsigned long n, const unsigned long index, const dyn_array_classic A, const bool b[n], bool res[n])
 {
     bool * restrict tmp = calloc(n, sizeof(bool));
@@ -312,10 +316,10 @@ void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
     for (unsigned long i = mpz_get_ui(tmp) ; i > 0 ; i--)
     {
         mpz_div_2exp(tmp,poly_a,i);
-        if (!mpz_divisible_ui_p(tmp,2)) mpz_xor(tmp_poly,tmp_poly,poly_b);
+        if (mpz_odd_p(tmp)) mpz_xor(tmp_poly,tmp_poly,poly_b);
         mpz_mul_2exp(tmp_poly,tmp_poly,1);
     }
-    if (!mpz_divisible_ui_p(poly_a,2)) mpz_xor(tmp_poly,tmp_poly,poly_b);
+    if (mpz_odd_p(poly_a)) mpz_xor(tmp_poly,tmp_poly,poly_b);
     mpz_set(res,tmp_poly);
     mpz_clears(tmp,tmp_poly,NULL);
 }
@@ -373,13 +377,13 @@ void poly_eval(const unsigned long n, const mpz_t poly, const bool x[n], bool re
     for (unsigned long i = 0 ; i < degree ; i++)
     {
         mpz_div_2exp(tmp,poly,degree-i);
-        if (!mpz_divisible_ui_p(tmp,2))
+        if (mpz_odd_p(tmp))
         {
              for (unsigned long j = 0 ; j < n ; j++) tmp2[j] ^= x[j];
         }
         multiply(n,limit,A,tmp2,tmp2);
     }
-    if (!mpz_divisible_ui_p(poly,2))
+    if (mpz_odd_p(poly))
     {
         for (unsigned long j = 0 ; j < n ; j++) tmp2[j] ^= x[j];
     }

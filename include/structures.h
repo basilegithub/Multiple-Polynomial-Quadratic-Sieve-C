@@ -2,6 +2,7 @@
 #define STRUCTURE_H
 
 #include <gmp.h>
+#include <stdbool.h>
 
 typedef struct
 {
@@ -23,6 +24,35 @@ typedef struct
     unsigned long len;
     unsigned long size;
 } dyn_array_small; // dynamic array of unsigned short integers
+
+typedef struct HashNode1D {
+    mpz_t key;
+    mpz_t value;
+    struct HashNode1D *next;
+} HashNode1D;
+
+typedef struct Hashmap_1D {
+    size_t buckets;
+    HashNode1D **table;
+} Hashmap_1D; // For the graph hashmap and the parent hashmap
+
+typedef struct PartialRelation {
+    mpz_t x; // x (mod n)
+    mpz_t y; // x*x - n
+    mpz_t small_p;
+    mpz_t big_p; // y = smooth_part*small_p*big_p, small_p < big_p
+} PartialRelation;
+
+typedef struct HashNodePartialRelation {
+    mpz_t key;
+    PartialRelation *value;
+    struct HashNodePartialRelation *next;
+} HashNodePartialRelation;
+
+typedef struct Hashmap_PartialRelation {
+    size_t buckets;
+    HashNodePartialRelation **table;
+} Hashmap_PartialRelation;
 
 // Functions declaration
 
@@ -68,5 +98,17 @@ void free_dyn_array(dyn_array* array);
 
 int is_present(dyn_array* array, mpz_t element);
 int is_present_ui(dyn_array* array, unsigned long param);
+
+// 1D Hashmap functions
+
+void hashmap_1d_create(Hashmap_1D *graph, size_t buckets);
+size_t hash_1d_mpz_strong(const Hashmap_1D *graph, const mpz_t key);
+void hashmap_1d_put(Hashmap_1D *graph, const mpz_t key, const mpz_t value);
+bool hashmap_1d_get(Hashmap_1D *graph, const mpz_t key, mpz_t output);
+void hashmap_1d_free(Hashmap_1D *graph);
+
+// 2D partial_relations Hashmap functions
+
+
 
 #endif // STRUCTURE_H

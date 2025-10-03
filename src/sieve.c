@@ -46,12 +46,12 @@ void sieve(dyn_array_small* sieve,
     const mpz_t * restrict roots_start = roots->start;
     const mpz_t * restrict inversa_a_start = inverse_a->start;
 
-    for (unsigned long i = prime_start ; i < primes->len ; i++)
+    for (size_t i = prime_start ; i < primes->len ; i++)
     {
         p = *(primes_start+i);
         increment = log_start[i];
         valid = 1;
-        for (unsigned long j = 0 ; j < locations->len ; j++)
+        for (size_t j = 0 ; j < locations->len ; j++)
         {
             if (*(locations_start+j) == i)
             {
@@ -63,7 +63,7 @@ void sieve(dyn_array_small* sieve,
         {
             case 1:
                 mpz_sub(z,*(roots_start+i),poly_b);
-                root = mpz_mod_ui(z,z,p);
+                root = mpz_fdiv_ui(z,p);
                 root = (root * mpz_get_ui(*(inversa_a_start+i)))%p;
                 root = (root+L)%p;
 
@@ -79,7 +79,7 @@ void sieve(dyn_array_small* sieve,
                 }
                 break;
             case 0:
-                root = mpz_mod_ui(z,tmp,p);
+                root = mpz_fdiv_ui(z,p);
                 root = (root+L)%p;
                 
                 for (unsigned short* ptr = sieve_array_start+root; ptr < sieve_array_start+length ; ptr += p)
@@ -96,7 +96,7 @@ void sieve(dyn_array_small* sieve,
     signed long tmp_array[length];
     size_t tmp_count = 0;
 
-    for (unsigned long x = L-1 ; --x ;)
+    for (size_t x = L-1 ; --x ;)
     {
         if (*(sieve_array_start+x)+skipped >= smooth_bound)
         {

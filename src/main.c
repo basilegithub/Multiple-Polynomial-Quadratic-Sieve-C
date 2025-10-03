@@ -310,7 +310,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
                 mpz_set(tmp,poly_res);
                 my_int_log2(tmp);
                 degree += mpz_get_ui(tmp);
-                while (mpz_divisible_ui_p(poly_res,2))
+                while (mpz_even_p(poly_res))
                 {
                     mpz_div_2exp(poly_res, poly_res, 1);
                     tmp_long++;
