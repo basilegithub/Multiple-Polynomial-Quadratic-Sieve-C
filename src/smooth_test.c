@@ -3,21 +3,24 @@
 #include <time.h>
 
 #include "structures.h"
+#include "utils.h"
 
-void batch_smooth(dyn_array* reported, dyn_array* large_primes, dyn_array_classic* smooth, dyn_array* tmp_array, mpz_t prod_primes, mpz_t limit, unsigned long prime)
+void batch_smooth(dyn_array* reported, dyn_array* tmp_array, PartialRelation *tmp_array2, mpz_t prod_primes, mpz_t limit, mpz_t limit_2, unsigned long prime)
 {
     for (mpz_t* ptr = reported->start ; ptr < reported->start+reported->len ; ptr++)
     {
         while (mpz_divisible_ui_p(*ptr,prime)) mpz_divexact_ui(*ptr,*ptr,prime);
     }
-    mpz_t tmp;
+    mpz_t tmp, tmp2;
     mpz_init_set_ui(tmp,2);
+    mpz_init(tmp2);
     unsigned long e = 0;
     for (mpz_t* ptr = reported->start ; ptr < reported->start+reported->len ; ptr++)
     {
-        while (mpz_cmp(tmp,*ptr) < 0)
+        while (mpz_cmp(tmp, *ptr) < 0)
         {
-            mpz_mul(tmp,tmp,tmp);
+            mpz_mul(tmp2, tmp, tmp);
+            mpz_set(tmp, tmp2);
             e++;
         }
     }
@@ -87,28 +90,40 @@ void batch_smooth(dyn_array* reported, dyn_array* large_primes, dyn_array_classi
         {
             mpz_mul(tmp,tmp,tmp);
             mpz_mod(tmp,tmp,*(reported->start+i));
-            tmp_long++;
+            tmp_long++; 
         }
-        if (!mpz_cmp_ui(tmp,0)) *(smooth->start+i) = 1;
+        if (!mpz_cmp_ui(tmp,0))
+        {
+            mpz_set_ui((tmp_array2+i)->small_p, 1);
+            mpz_set_ui((tmp_array2+i)->big_p, 1);
+        }
         else
         {
             mpz_gcd(boring,*(reported->start+i),tmp);
             mpz_divexact(boring,*(reported->start+i),boring);
-            if (mpz_cmp(boring,limit) < 1)
+
+            if (mpz_cmp(boring, limit) < 1)
             {
-                *(smooth->start+i) = 1;
-                mpz_set(*(large_primes->start+i),boring);
+                mpz_set_ui((tmp_array2+i)->small_p, 1);
+                mpz_set((tmp_array2+i)->big_p, boring);
             }
+            else if (mpz_cmp(boring, limit_2) < 1 && !fermat_primality(boring))
+            {
+                pollard_rho(boring, tmp, tmp2);
+                mpz_set((tmp_array2+i)->small_p, tmp);
+                mpz_set((tmp_array2+i)->big_p, tmp2);
+            }
+            else mpz_set_ui((tmp_array2+i)->small_p, 0);
         }
     }
-    mpz_clears(tmp,boring,NULL);
+    mpz_clears(tmp, tmp2, boring, NULL);
 }
 
-void naive_smooth(dyn_array* reported, dyn_array* large_primes, dyn_array_classic* smooth, dyn_array_classic primes, mpz_t limit)
+void naive_smooth(dyn_array* reported, PartialRelation *tmp_array, dyn_array_classic primes, mpz_t limit, mpz_t limit_2)
 {
-    mpz_t tmp, tmp2;
+    mpz_t tmp, tmp2, tmp3;
     mpz_init(tmp);
-    mpz_init(tmp2);
+    mpz_inits(tmp2, tmp3, NULL);
     unsigned long i = 0;
 
     for (mpz_t* ptr = reported->start ; ptr < reported->start+reported->len ; ptr++)
@@ -127,13 +142,20 @@ void naive_smooth(dyn_array* reported, dyn_array* large_primes, dyn_array_classi
 
         if (!mpz_cmp_ui(tmp, 1))
         {
-            *(smooth->start+i) = 1;
+            mpz_set_ui((tmp_array+i)->small_p, 1);
+            mpz_set_ui((tmp_array+i)->big_p, 1);
         }
         else if (mpz_cmp(tmp, limit) < 1)
         {
-            *(smooth->start+i) = 1;
-            mpz_set(*(large_primes->start+i), tmp);
+            mpz_set_ui((tmp_array+i)->small_p, 1);
+            mpz_set((tmp_array+i)->big_p, tmp);
+        } else if (mpz_cmp(tmp, limit_2) < 1 && !fermat_primality(tmp))
+        {
+            pollard_rho(tmp, tmp2, tmp3);
+            mpz_set((tmp_array+i)->small_p, tmp2);
+            mpz_set((tmp_array+i)->big_p, tmp3);
         }
+        else mpz_set_ui((tmp_array+i)->small_p, 0);
 
         i++;
     }

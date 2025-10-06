@@ -5,17 +5,13 @@
 void handle_relations(
     dyn_array* relations,
     dyn_array* smooth_numbers,
-    dyn_array* store_partial,
-    dyn_array* psmooth,
-    dyn_array* partial,
-    dyn_array large_primes,
+    PartialRelation *tmp_array,
+    Hashmap_PartialRelation *partial_relations,
     dyn_array block,
     dyn_array coefficient,
-    dyn_array_classic is_smooth,
     mpz_t n,
     mpz_t value,
     mpz_t tmp_bin,
-    mpz_t* tmp_vec2,
     unsigned long k,
     unsigned long tmp_a,
     unsigned long tmp_b,
@@ -26,13 +22,14 @@ void handle_relations(
     int* need_append
 )
 {
-    if (*(is_smooth.start+k))
+    mpz_t tmp;
+    mpz_init(tmp);
+    if (mpz_cmp_ui((tmp_array+k)->small_p, 0)) // If small_p is not 0, ie relation has at most two large primes
     {
-        *(is_smooth.start+k) = 0;
         mpz_set(value,*(block.start+k));
-        mpz_mul(value,value,*(coefficient.start+2*k));
-        mpz_add(value,value,*(coefficient.start+2*k+1));
-        if (!mpz_cmp_ui(*(large_primes.start+k),1))
+        mpz_mul(tmp,value,*(coefficient.start+2*k));
+        mpz_add(value,tmp,*(coefficient.start+2*k+1));
+        if (!mpz_cmp_ui((tmp_array+k)->big_p, 1)) // If big_p is 1, ie relation is full
         {
             append(smooth_numbers,value);
             mpz_mul(value,value,value);
@@ -45,33 +42,13 @@ void handle_relations(
             if (*need_append == 1)
             {
                 *need_append = 0;
-                append(psmooth,value);
-                mpz_mul(value,value,value);
-                mpz_sub(value,value,n);
-                append(partial,value);
-                mpz_set(tmp_vec2[1],*(large_primes.start+k));
-                append_block(store_partial,2,tmp_vec2);
+                mpz_set((tmp_array+k)->x, value);
+                mpz_set((tmp_array+k)->y, value);
+                hashmap_2d_put_node(partial_relations, *(tmp_array+k));
                 (*indexp)++;
-                mpz_add_ui(tmp_vec2[0],tmp_vec2[0],1);
             } else {
-                mpz_set(tmp_vec2[1],*(large_primes.start+k));
-                tmp_a = 0;
-                tmp_b = *indexp - 1;
-                tmplol = (tmp_a+tmp_b)/2;
-                mpz_set(tmp_bin,*(store_partial->start+tmplol*2+1));
-                while (mpz_cmp(tmp_bin,tmp_vec2[1]) != 0 && tmp_a <= tmp_b)
-                {
-                    if (mpz_cmp(tmp_bin,tmp_vec2[1]) < 0)
-                    {
-                        tmp_a = tmplol+1;
-                    } else {
-                        if (tmplol == 0) break;
-                        tmp_b = tmplol-1;
-                    }
-                    tmplol = (tmp_a+tmp_b)/2;
-                    mpz_set(tmp_bin,*(store_partial->start+tmplol*2+1));
-                }
-                if (mpz_cmp(tmp_bin,tmp_vec2[1]) != 0)
+                bool flag = hashmap_2d_is_present_mpz(partial_relations, (tmp_array+k)->small_p, (tmp_array+k)->big_p);
+                if (!flag)
                 {
                     append(psmooth,value);
                     mpz_mul(value,value,value);

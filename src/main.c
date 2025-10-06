@@ -482,12 +482,6 @@ int main()
     dyn_array relations,smooth_numbers;
     init(&relations);
 	init(&smooth_numbers);
-	dyn_array partial;
-    dyn_array psmooth;
-    dyn_array store_partial;
-    init(&partial);
-    init(&psmooth);
-    init(&store_partial);
 	{
         unsigned long full_found = 0, partial_found = 0;
         unsigned long indexp = 0;
@@ -503,7 +497,7 @@ int main()
         mpf_init(var2);
         mpf_init(var3);
         unsigned long objective, seconds = 0;
-        mpz_t multiplier, cst;
+        mpz_t multiplier, cst, cst2;
         
         mpz_init_set_ui(cst,*(primes.start+primes.len-1));
         mpf_set_z(tmpf,cst);
@@ -513,6 +507,10 @@ int main()
         mpz_init_set_ui(multiplier,*(primes.start+primes.len-1));
         mpz_sqrt(multiplier,multiplier);
         mpz_mul(cst,cst,multiplier);
+        mpz_init_set(cst2, cst);
+        mpz_mul(tmp2, cst2, multiplier);
+        mpz_set(cst2, tmp2);
+        
         mpf_set_z(tmpf,cst);
         natural_log(tmpf2,tmpf,ln2,e);
         mpf_sub_ui(tmpf2,tmpf2,1);
@@ -533,8 +531,6 @@ int main()
         natural_log(tmpf,tmpf,ln2,e);
         mpf_sub(target,target,tmpf);
         mpf_div(target,target,ln10);
-        mpz_t tmp_vec2[2];
-        for (unsigned long i = 0 ; i < 2 ; i++) mpz_init_set_ui(tmp_vec2[i],0);
         printf("\n");
         unsigned long prime_start = 20;
         mpf_t tmp_long1, tmp_long2;
@@ -581,16 +577,12 @@ int main()
                         logfile,
                         &relations,
                         &smooth_numbers,
-                        &store_partial,
-                        &psmooth,
-                        &partial,
                         primes,
                         a,
                         n,
                         prod_primes,
                         cst,
                         tmp_bin,
-                        tmp_vec2,
                         nb_large,
                         target,
                         ln2,
@@ -636,16 +628,13 @@ int main()
             mono_cpu_sieve(
                         &relations,
                         &smooth_numbers,
-                        &store_partial,
-                        &psmooth,
-                        &partial,
                         primes,
                         a,
                         n,
                         prod_primes,
                         cst,
+                        cst2,
                         tmp_bin,
-                        tmp_vec2,
                         nb_large,
                         target,
                         ln2,
@@ -695,15 +684,6 @@ int main()
 	}
 
 	mpz_init(tmp);
-	for (unsigned long i = 0 ; i < psmooth.len ; i++) mpz_clear(*(psmooth.start+i));
-    free(psmooth.start);
-    psmooth.start = NULL;
-	for (unsigned long i = 0 ; i < partial.len ; i++) mpz_clear(*(partial.start+i));
-    free(partial.start);
-    partial.start = NULL;
-	for (unsigned long i = 0 ; i < store_partial.len ; i++) mpz_clear(*(store_partial.start+i));
-    free(store_partial.start);
-    store_partial.start = NULL;
 
 	mpz_clear(prod_primes);
 	tm = *localtime(&(time_t){time(NULL)});

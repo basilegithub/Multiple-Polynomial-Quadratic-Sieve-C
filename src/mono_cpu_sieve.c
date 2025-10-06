@@ -13,16 +13,13 @@
 void mono_cpu_sieve(
     dyn_array* relations,
     dyn_array* smooth_numbers,
-    dyn_array* store_partial,
-    dyn_array* psmooth,
-    dyn_array* partial,
     dyn_array_classic primes,
     dyn_array a,
     mpz_t n,
     mpz_t prod_primes,
     mpz_t cst,
+    mpz_t cst2,
     mpz_t tmp_bin,
-    mpz_t* tmp_vec2,
     mpf_t nb_large,
     mpf_t target,
     mpf_t ln2,
@@ -100,13 +97,21 @@ void mono_cpu_sieve(
     unsigned long threshold = 0;
     unsigned long ind;
 
-    dyn_array to_batch, large_primes;
-    dyn_array_classic is_smooth;
+    Hashmap_PartialRelation partial_relations;
+    hashmap_2d_create(&partial_relations, 2048);
+
+    PartialRelation tmp_array[batch_size];
+    for (size_t i = 0 ; i < batch_size ; i++)
+    {
+        mpz_init(tmp_array[i].x);
+        mpz_init(tmp_array[i].y);
+        mpz_init(tmp_array[i].small_p);
+        mpz_init(tmp_array[i].big_p);
+    }
+
+    dyn_array to_batch;
     init2_len(&to_batch,batch_size);
     reset(&to_batch);
-    init2_len(&large_primes,batch_size);
-    for (unsigned long i = 0 ; i < batch_size ; i++) mpz_set_ui(*(large_primes.start+i),1);
-    init_len_classic(&is_smooth,batch_size);
 
     dyn_array batch_array;
     init2_len(&batch_array,2*batch_size-1);
@@ -172,11 +177,11 @@ void mono_cpu_sieve(
             {
                 if (flag_batch_smooth)
                 {
-                    batch_smooth(&to_batch,&large_primes,&is_smooth,&batch_array,prod_primes,cst,prime);
+                    batch_smooth(&to_batch,&tmp_array,&batch_array,prod_primes,cst,cst2,prime);
                 }
                 else
                 {
-                    naive_smooth(&to_batch, &large_primes, &is_smooth, primes, cst);
+                    naive_smooth(&to_batch, &tmp_array, primes, cst);
                 }
 
                 for (unsigned long k = 0 ; k < batch_size ; k++)
@@ -184,17 +189,13 @@ void mono_cpu_sieve(
                     handle_relations(
                         relations,
                         smooth_numbers,
-                        store_partial,
-                        psmooth,
-                        partial,
-                        large_primes,
+                        &tmp_array,
+                        &partial_relations,
                         block,
                         coefficient,
-                        is_smooth,
                         n,
                         value,
                         tmp_bin,
-                        tmp_vec2,
                         k,
                         tmp_a,
                         tmp_b,
@@ -234,7 +235,7 @@ void mono_cpu_sieve(
                     mpf_set_d(var2,rate1);
                     mpf_mul(var2,var2,nb_large);
 
-                    mpf_set_ui(tmpf,partial->len);
+                    mpf_set_ui(tmpf,*partial_found);
                     mpf_div(tmpf,tmpf,nb_large);
                     mpf_set_d(tmpf2,rate2);
                     mpf_mul(tmpf,tmpf,tmpf2);
@@ -264,4 +265,13 @@ void mono_cpu_sieve(
     block.start = NULL;
     free(sieve_array.start);
     sieve_array.start = NULL;
+
+    for (size_t i = 0 ; i < batch_size ; i++)
+    {
+        mpz_clear(tmp_array[i].x);
+        mpz_clear(tmp_array[i].y);
+        mpz_clear(tmp_array[i].small_p);
+        mpz_clear(tmp_array[i].big_p);
+    }
+    free(tmp_array);
 }

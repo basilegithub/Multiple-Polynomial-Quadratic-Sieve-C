@@ -268,6 +268,18 @@ int mpz_equal(const mpz_t a, const mpz_t b) {
     return (mpz_cmp(a, b));
 }
 
+bool fermat_primality(mpz_t n)
+{
+    mpz_t res, base, exponent;
+    mpz_init_set_ui(base, 2);
+    mpz_inits(res, exponent, NULL);
+    mpz_sub_ui(exponent, n, 1);
+
+    mpz_powm(res, base, exponent, n);
+
+    return (bool) mpz_cmp_ui(res, 1) == 0;
+}
+
 void multiply(const unsigned long n, const unsigned long index, const dyn_array_classic A, const bool b[n], bool res[n])
 {
     bool * restrict tmp = calloc(n, sizeof(bool));
