@@ -98,9 +98,9 @@ void mono_cpu_sieve(
     unsigned long ind;
 
     Hashmap_PartialRelation partial_relations;
-    hashmap_2d_create(&partial_relations, 2048);
+    hashmap_2d_create(&partial_relations, 4096);
 
-    PartialRelation tmp_array[batch_size];
+    PartialRelation *tmp_array = calloc(batch_size, sizeof(PartialRelation));
     for (size_t i = 0 ; i < batch_size ; i++)
     {
         mpz_init(tmp_array[i].x);
@@ -177,11 +177,11 @@ void mono_cpu_sieve(
             {
                 if (flag_batch_smooth)
                 {
-                    batch_smooth(&to_batch,&tmp_array,&batch_array,prod_primes,cst,cst2,prime);
+                    batch_smooth(&to_batch,&batch_array,tmp_array,prod_primes,cst,cst2,prime);
                 }
                 else
                 {
-                    naive_smooth(&to_batch, &tmp_array, primes, cst);
+                    naive_smooth(&to_batch, tmp_array, primes, cst);
                 }
 
                 for (unsigned long k = 0 ; k < batch_size ; k++)
@@ -189,7 +189,7 @@ void mono_cpu_sieve(
                     handle_relations(
                         relations,
                         smooth_numbers,
-                        &tmp_array,
+                        tmp_array,
                         &partial_relations,
                         block,
                         coefficient,
@@ -235,7 +235,7 @@ void mono_cpu_sieve(
                     mpf_set_d(var2,rate1);
                     mpf_mul(var2,var2,nb_large);
 
-                    mpf_set_ui(tmpf,*partial_found);
+                    mpf_set_ui(tmpf,*indexp);
                     mpf_div(tmpf,tmpf,nb_large);
                     mpf_set_d(tmpf2,rate2);
                     mpf_mul(tmpf,tmpf,tmpf2);

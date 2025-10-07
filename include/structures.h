@@ -115,7 +115,7 @@ void hashmap_2d_compute_key_from_mpz(const mpz_t small_p, const mpz_t big_p, mpz
 size_t hash_2d_mpz_strong(const Hashmap_PartialRelation *partial_relations, const mpz_t key);
 void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, const PartialRelation value);
 void hashmap_2d_put_node(Hashmap_PartialRelation *partial_relations, PartialRelation new_node);
-bool hashmap_2d_get(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, PartialRelation output);
+bool hashmap_2d_get_from_mpz(Hashmap_PartialRelation *partial_relations, const mpz_t small_p, const mpz_t big_p, PartialRelation *output);
 bool hashmap_2d_is_present_mpz(Hashmap_PartialRelation *partial_relations, const mpz_t small_p, const mpz_t big_p);
 void hashmap_2d_free(Hashmap_PartialRelation *partial_relations);
 

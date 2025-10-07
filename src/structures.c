@@ -404,8 +404,6 @@ void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned l
     hashmap_2d_compute_key(small_p, big_p, key);
     size_t index = hash_2d_mpz_strong(partial_relations, key);
 
-    mpz_clear(key);
-
     HashNodePartialRelation *node = partial_relations->table[index];
 
     while (node) {
@@ -414,6 +412,7 @@ void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned l
             mpz_set(node->value->y, value.y); // update existing
             mpz_set(node->value->small_p, value.small_p); // update existing
             mpz_set(node->value->big_p, value.big_p); // update existing
+            mpz_clear(key);
             return;
         }
         node = node->next;
@@ -421,15 +420,18 @@ void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned l
 
     // not found → insert
     node = malloc(sizeof(HashNodePartialRelation));
+    node->value = malloc(sizeof(PartialRelation));
     mpz_init_set(node->key, key);
 
-    mpz_set(node->value->x, value.x);
-    mpz_set(node->value->y, value.y);
-    mpz_set(node->value->small_p, value.small_p);
-    mpz_set(node->value->big_p, value.big_p);
+    mpz_init_set(node->value->x, value.x);
+    mpz_init_set(node->value->y, value.y);
+    mpz_init_set(node->value->small_p, value.small_p);
+    mpz_init_set(node->value->big_p, value.big_p);
 
     node->next = partial_relations->table[index];
     partial_relations->table[index] = node;
+
+    mpz_clear(key);
 }
 
 void hashmap_2d_put_node(Hashmap_PartialRelation *partial_relations, PartialRelation new_node)
@@ -439,8 +441,6 @@ void hashmap_2d_put_node(Hashmap_PartialRelation *partial_relations, PartialRela
     hashmap_2d_compute_key_from_mpz(new_node.small_p, new_node.big_p, key);
     size_t index = hash_2d_mpz_strong(partial_relations, key);
 
-    mpz_clear(key);
-
     HashNodePartialRelation *node = partial_relations->table[index];
 
     while (node) {
@@ -449,6 +449,7 @@ void hashmap_2d_put_node(Hashmap_PartialRelation *partial_relations, PartialRela
             mpz_set(node->value->y, new_node.y); // update existing
             mpz_set(node->value->small_p, new_node.small_p); // update existing
             mpz_set(node->value->big_p, new_node.big_p); // update existing
+            mpz_clear(key);
             return;
         }
         node = node->next;
@@ -456,39 +457,42 @@ void hashmap_2d_put_node(Hashmap_PartialRelation *partial_relations, PartialRela
 
     // not found → insert
     node = malloc(sizeof(HashNodePartialRelation));
+    node->value = malloc(sizeof(PartialRelation));
     mpz_init_set(node->key, key);
 
-    mpz_set(node->value->x, new_node.x);
-    mpz_set(node->value->y, new_node.y);
-    mpz_set(node->value->small_p, new_node.small_p);
-    mpz_set(node->value->big_p, new_node.big_p);
+    mpz_init_set(node->value->x, new_node.x);
+    mpz_init_set(node->value->y, new_node.y);
+    mpz_init_set(node->value->small_p, new_node.small_p);
+    mpz_init_set(node->value->big_p, new_node.big_p);
 
     node->next = partial_relations->table[index];
     partial_relations->table[index] = node;
-}
-
-bool hashmap_2d_get(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, PartialRelation output)
-{
-     mpz_t key;
-    mpz_init(key);
-    hashmap_2d_compute_key(small_p, big_p, key);
-    size_t index = hash_2d_mpz_strong(partial_relations, key);
 
     mpz_clear(key);
+}
+
+bool hashmap_2d_get_from_mpz(Hashmap_PartialRelation *partial_relations, const mpz_t small_p, const mpz_t big_p, PartialRelation *output)
+{
+    mpz_t key;
+    mpz_init(key);
+    hashmap_2d_compute_key_from_mpz(small_p, big_p, key);
+    size_t index = hash_2d_mpz_strong(partial_relations, key);
     
     HashNodePartialRelation *node = partial_relations->table[index];
 
     while (node) {
         if (mpz_cmp(node->key, key) == 0) {
-            mpz_set(output.x, node->value->x);
-            mpz_set(output.y, node->value->y);
-            mpz_set(output.small_p, node->value->small_p);
-            mpz_set(output.big_p, node->value->big_p);
+            mpz_set(output->x, node->value->x);
+            mpz_set(output->y, node->value->y);
+            mpz_set(output->small_p, node->value->small_p);
+            mpz_set(output->big_p, node->value->big_p);
+            mpz_clear(key);
             return true;  // found
         }
         node = node->next;
     }
 
+    mpz_clear(key);
     return false; // not found
 }
 
@@ -498,17 +502,18 @@ bool hashmap_2d_is_present_mpz(Hashmap_PartialRelation *partial_relations, const
     mpz_init(key);
     hashmap_2d_compute_key_from_mpz(small_p, big_p, key);
     size_t index = hash_2d_mpz_strong(partial_relations, key);
-
-    mpz_clear(key);
     
     HashNodePartialRelation *node = partial_relations->table[index];
 
     while (node) {
         if (mpz_cmp(node->key, key) == 0) {
+            mpz_clear(key);
             return true;  // found
         }
         node = node->next;
     }
+
+    mpz_clear(key);
 
     return false; // not found
 }

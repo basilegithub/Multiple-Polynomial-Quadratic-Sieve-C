@@ -21,6 +21,7 @@ void parallel_sieve(
     mpz_t n,
     mpz_t prod_primes,
     mpz_t cst,
+    mpz_t cst2,
     mpz_t tmp_bin,
     mpf_t nb_large,
     mpf_t target,
@@ -109,6 +110,18 @@ void parallel_sieve(
             unsigned long threshold = 0;
             unsigned long ind;
 
+            Hashmap_PartialRelation partial_relations;
+            hashmap_2d_create(&partial_relations, 4096);
+
+            PartialRelation *tmp_array = calloc(batch_size, sizeof(PartialRelation));
+            for (size_t i = 0 ; i < batch_size ; i++)
+            {
+                mpz_init(tmp_array[i].x);
+                mpz_init(tmp_array[i].y);
+                mpz_init(tmp_array[i].small_p);
+                mpz_init(tmp_array[i].big_p);
+            }
+
             dyn_array to_batch, large_primes;
             dyn_array_classic is_smooth;
             init2_len(&to_batch,batch_size);
@@ -183,11 +196,11 @@ void parallel_sieve(
                     {
                         if (flag_batch_smooth)
                         {
-                            batch_smooth(&to_batch,&large_primes,&is_smooth,&batch_array,prod_primes,cst,prime);
+                            batch_smooth(&to_batch,&batch_array,tmp_array,prod_primes,cst,cst2,prime);
                         }
                         else
                         {
-                            naive_smooth(&to_batch, &large_primes, &is_smooth, primes, cst);
+                            naive_smooth(&to_batch, tmp_array, primes, cst);
                         }
                         
                         #pragma omp critical
@@ -197,17 +210,13 @@ void parallel_sieve(
                                 handle_relations(
                                     relations,
                                     smooth_numbers,
-                                    store_partial,
-                                    psmooth,
-                                    partial,
-                                    large_primes,
+                                    tmp_array,
+                                    &partial_relations,
                                     block,
                                     coefficient,
-                                    is_smooth,
                                     n,
                                     value,
                                     tmp_bin,
-                                    tmp_vec2,
                                     k,
                                     tmp_a,
                                     tmp_b,
@@ -246,7 +255,7 @@ void parallel_sieve(
                                 mpf_set_d(var2,rate1);
                                 mpf_mul(var2,var2,nb_large);
 
-                                mpf_set_ui(tmpf,partial->len);
+                                mpf_set_ui(tmpf,*indexp);
                                 mpf_div(tmpf,tmpf,nb_large);
                                 mpf_set_d(tmpf2,rate2);
                                 mpf_mul(tmpf,tmpf,tmpf2);

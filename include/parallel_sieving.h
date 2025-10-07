@@ -15,6 +15,7 @@ void parallel_sieve(
     mpz_t n,
     mpz_t prod_primes,
     mpz_t cst,
+    mpz_t cst2,
     mpz_t tmp_bin,
     mpf_t nb_large,
     mpf_t target,

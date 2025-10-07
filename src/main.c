@@ -508,7 +508,7 @@ int main()
         mpz_sqrt(multiplier,multiplier);
         mpz_mul(cst,cst,multiplier);
         mpz_init_set(cst2, cst);
-        mpz_mul(tmp2, cst2, multiplier);
+        mpz_mul_ui(tmp2, cst2, *(primes.start+primes.len-1));
         mpz_set(cst2, tmp2);
         
         mpf_set_z(tmpf,cst);
@@ -517,7 +517,8 @@ int main()
         mpf_div(nb_primes2,tmpf,tmpf2);
         mpf_sub(nb_large,nb_primes2,nb_primes1);
         mpf_div_ui(nb_large,nb_large,2);
-        log_gmp_msg(logfile, "Large prime bound = %Zd = %Zd*p_max", cst, multiplier);
+        log_gmp_msg(logfile, "Large prime bound 1 = %Zd = %Zd*p_max", cst, multiplier);
+        log_gmp_msg(logfile, "Large prime bound 2 = %Zd = %Zd*p_max^2", cst2, multiplier);
         mpz_t tmp_bin;
         mpz_init(tmp_bin);
         unsigned long tmp_a, tmp_b, tmplol;
@@ -582,6 +583,7 @@ int main()
                         n,
                         prod_primes,
                         cst,
+                        cst2,
                         tmp_bin,
                         nb_large,
                         target,

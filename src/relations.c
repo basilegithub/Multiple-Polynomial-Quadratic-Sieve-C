@@ -1,4 +1,5 @@
 #include <gmp.h>
+#include <stdio.h>
 
 #include "structures.h"
 
@@ -26,15 +27,15 @@ void handle_relations(
     mpz_init(tmp);
     if (mpz_cmp_ui((tmp_array+k)->small_p, 0)) // If small_p is not 0, ie relation has at most two large primes
     {
-        mpz_set(value,*(block.start+k));
-        mpz_mul(tmp,value,*(coefficient.start+2*k));
-        mpz_add(value,tmp,*(coefficient.start+2*k+1));
+        mpz_set(value, *(block.start+k));
+        mpz_mul(tmp, value, *(coefficient.start+2*k));
+        mpz_add(value, tmp, *(coefficient.start+2*k+1));
         if (!mpz_cmp_ui((tmp_array+k)->big_p, 1)) // If big_p is 1, ie relation is full
         {
-            append(smooth_numbers,value);
-            mpz_mul(value,value,value);
-            mpz_sub(value,value,n);
-            append(relations,value);
+            append(smooth_numbers, value);
+            mpz_mul(tmp, value, value);
+            mpz_sub(value, tmp, n);
+            append(relations, value);
             (*full_found)++;
         }
         else
@@ -43,6 +44,8 @@ void handle_relations(
             {
                 *need_append = 0;
                 mpz_set((tmp_array+k)->x, value);
+                mpz_mul(tmp,value,value);
+                mpz_sub(value,tmp,n);
                 mpz_set((tmp_array+k)->y, value);
                 hashmap_2d_put_node(partial_relations, *(tmp_array+k));
                 (*indexp)++;
@@ -50,31 +53,35 @@ void handle_relations(
                 bool flag = hashmap_2d_is_present_mpz(partial_relations, (tmp_array+k)->small_p, (tmp_array+k)->big_p);
                 if (!flag)
                 {
-                    append(psmooth,value);
-                    mpz_mul(value,value,value);
-                    mpz_sub(value,value,n);
-                    append(partial,value);
-                    insert_block(store_partial,tmp_a*2,2,tmp_vec2);
+                    mpz_set((tmp_array+k)->x, value);
+                    mpz_mul(tmp,value,value);
+                    mpz_sub(value,tmp,n);
+                    mpz_set((tmp_array+k)->y, value);
+                    hashmap_2d_put_node(partial_relations, *(tmp_array+k));
                     (*indexp)++;
-                    mpz_add_ui(tmp_vec2[0],tmp_vec2[0],1);
                 } else {
-                    tmplol = mpz_get_ui(*(store_partial->start+2*tmplol));
-                    mpz_mul(tmp_bin,value,value);
-                    mpz_sub(tmp_bin,tmp_bin,n);
-                    mpz_mul(tmp_bin,tmp_bin,*(partial->start+tmplol));
-                    mpz_divexact(tmp_bin,tmp_bin,tmp_vec2[1]);
-                    mpz_divexact(tmp_bin,tmp_bin,tmp_vec2[1]);
-                    append(relations,tmp_bin);
+                    PartialRelation to_combine_node;
+                    mpz_inits(to_combine_node.x, to_combine_node.y, to_combine_node.small_p, to_combine_node.big_p, NULL);
+                    hashmap_2d_get_from_mpz(partial_relations, (tmp_array+k)->small_p, (tmp_array+k)->big_p, &to_combine_node);
 
-                    mpz_mul(value,value,*(psmooth->start+tmplol));
-                    mpz_invert(tmp_bin,tmp_vec2[1],n);
-                    mpz_mul(value,value,tmp_bin);
-                    mpz_mod(value,value,n);
+                    mpz_mul(tmp_bin, value, value);
+                    mpz_sub(tmp_bin, tmp_bin, n);
+                    mpz_mul(tmp, tmp_bin, to_combine_node.y);
+                    mpz_divexact(tmp_bin, tmp, to_combine_node.big_p);
+                    mpz_divexact(tmp, tmp_bin, to_combine_node.big_p);
+                    append(relations,tmp);
+
+                    mpz_mul(value, value, to_combine_node.x);
+                    mpz_invert(tmp_bin, to_combine_node.big_p, n);
+                    mpz_mul(tmp, value, tmp_bin);
+                    mpz_mod(value, tmp, n);
                     append(smooth_numbers,value);
                     (*partial_found)++;
+
+                    mpz_clears(to_combine_node.x, to_combine_node.y, to_combine_node.small_p, to_combine_node.big_p, NULL);
                 }
             }
-            mpz_set_ui(*(large_primes.start+k),1);
         }
     }
+    mpz_clear(tmp);
 }

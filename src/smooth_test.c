@@ -107,12 +107,12 @@ void batch_smooth(dyn_array* reported, dyn_array* tmp_array, PartialRelation *tm
                 mpz_set_ui((tmp_array2+i)->small_p, 1);
                 mpz_set((tmp_array2+i)->big_p, boring);
             }
-            else if (mpz_cmp(boring, limit_2) < 1 && !fermat_primality(boring))
-            {
-                pollard_rho(boring, tmp, tmp2);
-                mpz_set((tmp_array2+i)->small_p, tmp);
-                mpz_set((tmp_array2+i)->big_p, tmp2);
-            }
+            // else if (mpz_cmp(boring, limit_2) < 1 && !fermat_primality(boring))
+            // {
+            //     pollard_rho(boring, tmp, tmp2);
+            //     mpz_set((tmp_array2+i)->small_p, tmp);
+            //     mpz_set((tmp_array2+i)->big_p, tmp2);
+            // }
             else mpz_set_ui((tmp_array2+i)->small_p, 0);
         }
     }
@@ -149,12 +149,13 @@ void naive_smooth(dyn_array* reported, PartialRelation *tmp_array, dyn_array_cla
         {
             mpz_set_ui((tmp_array+i)->small_p, 1);
             mpz_set((tmp_array+i)->big_p, tmp);
-        } else if (mpz_cmp(tmp, limit_2) < 1 && !fermat_primality(tmp))
-        {
-            pollard_rho(tmp, tmp2, tmp3);
-            mpz_set((tmp_array+i)->small_p, tmp2);
-            mpz_set((tmp_array+i)->big_p, tmp3);
         }
+        // else if (mpz_cmp(tmp, limit_2) < 1 && !fermat_primality(tmp))
+        // {
+        //     pollard_rho(tmp, tmp2, tmp3);
+        //     mpz_set((tmp_array+i)->small_p, tmp2);
+        //     mpz_set((tmp_array+i)->big_p, tmp3);
+        // }
         else mpz_set_ui((tmp_array+i)->small_p, 0);
 
         i++;
