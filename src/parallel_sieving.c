@@ -111,7 +111,7 @@ void parallel_sieve(
             unsigned long ind;
 
             Hashmap_PartialRelation partial_relations;
-            hashmap_2d_create(&partial_relations, 4096);
+            hashmap_2d_create(&partial_relations, 16*4096);
 
             PartialRelation *tmp_array = calloc(batch_size, sizeof(PartialRelation));
             for (size_t i = 0 ; i < batch_size ; i++)
@@ -121,6 +121,18 @@ void parallel_sieve(
                 mpz_init(tmp_array[i].small_p);
                 mpz_init(tmp_array[i].big_p);
             }
+
+            PartialRelation to_combine_node;
+            mpz_inits(to_combine_node.x, to_combine_node.y, to_combine_node.small_p, to_combine_node.big_p, NULL);
+
+            dyn_array_stack stack;
+            stack_init(&stack);
+
+            Hashmap_graph graph;
+            hashmap_graph_create(&graph, 16*4096);
+
+            Hashmap_1D parent;
+            hashmap_1d_create(&parent, 16*4096);
 
             dyn_array to_batch, large_primes;
             dyn_array_classic is_smooth;
@@ -200,7 +212,7 @@ void parallel_sieve(
                         }
                         else
                         {
-                            naive_smooth(&to_batch, tmp_array, primes, cst);
+                            naive_smooth(&to_batch, tmp_array, primes, cst, cst2);
                         }
                         
                         #pragma omp critical
@@ -212,6 +224,10 @@ void parallel_sieve(
                                     smooth_numbers,
                                     tmp_array,
                                     &partial_relations,
+                                    &to_combine_node,
+                                    &graph,
+                                    &parent,
+                                    &stack,
                                     block,
                                     coefficient,
                                     n,
@@ -287,5 +303,16 @@ void parallel_sieve(
             block.start = NULL;
             free(sieve_array.start);
             sieve_array.start = NULL;
+
+            for (size_t i = 0 ; i < batch_size ; i++)
+            {
+                mpz_clear(tmp_array[i].x);
+                mpz_clear(tmp_array[i].y);
+                mpz_clear(tmp_array[i].small_p);
+                mpz_clear(tmp_array[i].big_p);
+            }
+            free(tmp_array);
+
+            mpz_clears(to_combine_node.x, to_combine_node.y, to_combine_node.small_p, to_combine_node.big_p, NULL);
         }
 }

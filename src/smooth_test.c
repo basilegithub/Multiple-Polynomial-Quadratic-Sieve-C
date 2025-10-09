@@ -5,6 +5,104 @@
 #include "structures.h"
 #include "utils.h"
 
+void pollard_rho(const mpz_t m, mpz_t p1, mpz_t p2)
+{
+    mpz_t a, b, d, e, x, y, X, Y, tmp;
+    mpz_inits(a, b, d, e, x, y, X, Y, tmp, NULL);
+
+    gmp_randstate_t state;
+    gmp_randinit_default(state);
+    gmp_randseed_ui(state, (unsigned long)time(NULL));
+
+    mpz_sub_ui(tmp, m, 4);
+    mpz_urandomm(a, state, tmp);
+    mpz_add_ui(a, a, 1);
+
+    mpz_sub_ui(tmp, m, 1);
+    mpz_urandomm(b, state, tmp);
+
+    mpz_set(x, b);
+    mpz_set(y, b);
+    mpz_set_ui(d, 1);
+
+    while (mpz_cmp_ui(d, 1) == 0)
+    {
+        mpz_set_ui(e, 1);
+        mpz_set(X, x);
+        mpz_set(Y, y);
+
+        for (unsigned int k = 0 ; k < 100 ; k++)
+        {
+            mpz_mul(tmp, x, x);
+            mpz_add(x, tmp, a);
+            mpz_mod(x, x, m); // x = (x*x+a)%m
+
+            mpz_mul(tmp, y, y);
+            mpz_add(y, tmp, a);
+            mpz_mod(y, y, m); // y = (y*y+a)%m
+
+            mpz_mul(tmp, y, y);
+            mpz_add(y, tmp, a);
+            mpz_mod(y, y, m); // y = (y*y+a)%m
+
+            mpz_sub(tmp, x, y);
+            mpz_mul(b, e, tmp);
+            mpz_mod(e, b, m); // e = e*(x-y)%m
+        }
+
+        mpz_gcd(d, e, m);
+    }
+
+    mpz_clears(b, e, NULL);
+
+    if (mpz_cmp(d, m) == 0)
+    {
+        mpz_set(x, X);
+        mpz_set(y, Y);
+        mpz_set_ui(d, 1);
+
+        while (mpz_cmp_ui(d, 1) == 0)
+        {
+            mpz_mul(tmp, x, x);
+            mpz_add(x, tmp, a);
+            mpz_mod(x, x, m); // x = (x*x+a)%m
+
+            mpz_mul(tmp, y, y);
+            mpz_add(y, tmp, a);
+            mpz_mod(y, y, m); // y = (y*y+a)%m
+
+            mpz_mul(tmp, y, y);
+            mpz_add(y, tmp, a);
+            mpz_mod(y, y, m); // y = (y*y+a)%m
+
+            mpz_sub(tmp, x, y);
+            mpz_mod(tmp, tmp, m);
+            mpz_gcd(d, tmp, m);
+        }
+    }
+
+    mpz_clears(a, x, y, X, Y, NULL);
+
+    if (mpz_cmp(d, m) == 0) pollard_rho(m, p1, p2);
+
+    else
+    {
+        mpz_divexact(tmp, m, d);
+        if (mpz_cmp(tmp, d) < 0)
+        {
+            mpz_set(p1, tmp);
+            mpz_set(p2, d);
+        }
+        else
+        {
+            mpz_set(p1, d);
+            mpz_set(p2, tmp);
+        }
+    }
+
+    mpz_clears(d, tmp, NULL);
+}
+
 void batch_smooth(dyn_array* reported, dyn_array* tmp_array, PartialRelation *tmp_array2, mpz_t prod_primes, mpz_t limit, mpz_t limit_2, unsigned long prime)
 {
     for (mpz_t* ptr = reported->start ; ptr < reported->start+reported->len ; ptr++)
@@ -107,12 +205,12 @@ void batch_smooth(dyn_array* reported, dyn_array* tmp_array, PartialRelation *tm
                 mpz_set_ui((tmp_array2+i)->small_p, 1);
                 mpz_set((tmp_array2+i)->big_p, boring);
             }
-            // else if (mpz_cmp(boring, limit_2) < 1 && !fermat_primality(boring))
-            // {
-            //     pollard_rho(boring, tmp, tmp2);
-            //     mpz_set((tmp_array2+i)->small_p, tmp);
-            //     mpz_set((tmp_array2+i)->big_p, tmp2);
-            // }
+            else if (mpz_cmp(boring, limit_2) < 1 && !fermat_primality(boring))
+            {
+                pollard_rho(boring, tmp, tmp2);
+                mpz_set((tmp_array2+i)->small_p, tmp);
+                mpz_set((tmp_array2+i)->big_p, tmp2);
+            }
             else mpz_set_ui((tmp_array2+i)->small_p, 0);
         }
     }
@@ -150,113 +248,15 @@ void naive_smooth(dyn_array* reported, PartialRelation *tmp_array, dyn_array_cla
             mpz_set_ui((tmp_array+i)->small_p, 1);
             mpz_set((tmp_array+i)->big_p, tmp);
         }
-        // else if (mpz_cmp(tmp, limit_2) < 1 && !fermat_primality(tmp))
-        // {
-        //     pollard_rho(tmp, tmp2, tmp3);
-        //     mpz_set((tmp_array+i)->small_p, tmp2);
-        //     mpz_set((tmp_array+i)->big_p, tmp3);
-        // }
+        else if (mpz_cmp(tmp, limit_2) < 1 && !fermat_primality(tmp))
+        {
+            pollard_rho(tmp, tmp2, tmp3);
+            mpz_set((tmp_array+i)->small_p, tmp2);
+            mpz_set((tmp_array+i)->big_p, tmp3);
+        }
         else mpz_set_ui((tmp_array+i)->small_p, 0);
 
         i++;
     }
     mpz_clears(tmp, tmp2, NULL);
-}
-
-void pollard_rho(const mpz_t m, mpz_t p1, mpz_t p2)
-{
-    mpz_t a, b, d, e, x, y, X, Y, tmp;
-    mpz_inits(a, b, d, e, x, y, X, Y, tmp, NULL);
-
-    gmp_randstate_t state;
-    gmp_randinit_default(state);
-    gmp_randseed_ui(state, (unsigned long)time(NULL));
-
-    mpz_sub_ui(tmp, m, 4);
-    mpz_urandomm(a, state, tmp);
-    mpz_add_ui(a, a, 1);
-
-    mpz_sub_ui(tmp, m, 1);
-    mpz_urandomm(b, state, tmp);
-
-    mpz_set(x, b);
-    mpz_set(y, b);
-    mpz_set_ui(d, 1);
-
-    while (mpz_cmp_ui(d, 1) == 0)
-    {
-        mpz_set_ui(e, 1);
-        mpz_set(X, x);
-        mpz_set(Y, y);
-
-        for (unsigned int k = 0 ; k < 100 ; k++)
-        {
-            mpz_mul(tmp, x, x);
-            mpz_add(x, tmp, a);
-            mpz_mod(x, x, m); // x = (x*x+a)%m
-
-            mpz_mul(tmp, y, y);
-            mpz_add(y, tmp, a);
-            mpz_mod(y, y, m); // y = (y*y+a)%m
-
-            mpz_mul(tmp, y, y);
-            mpz_add(y, tmp, a);
-            mpz_mod(y, y, m); // y = (y*y+a)%m
-
-            mpz_sub(tmp, x, y);
-            mpz_mul(b, e, tmp);
-            mpz_mod(e, b, m); // e = e*(x-y)%m
-        }
-
-        mpz_gcd(d, e, m);
-    }
-
-    mpz_clears(b, e, NULL);
-
-    if (mpz_cmp(d, m) == 0)
-    {
-        mpz_set(x, X);
-        mpz_set(y, Y);
-        mpz_set_ui(d, 1);
-
-        while (mpz_cmp_ui(d, 1) == 0)
-        {
-            mpz_mul(tmp, x, x);
-            mpz_add(x, tmp, a);
-            mpz_mod(x, x, m); // x = (x*x+a)%m
-
-            mpz_mul(tmp, y, y);
-            mpz_add(y, tmp, a);
-            mpz_mod(y, y, m); // y = (y*y+a)%m
-
-            mpz_mul(tmp, y, y);
-            mpz_add(y, tmp, a);
-            mpz_mod(y, y, m); // y = (y*y+a)%m
-
-            mpz_sub(tmp, x, y);
-            mpz_mod(tmp, tmp, m);
-            mpz_gcd(d, tmp, m);
-        }
-    }
-
-    mpz_clears(a, x, y, X, Y, NULL);
-
-    if (mpz_cmp(d, m) == 0) pollard_rho(m, p1, p2);
-
-    else
-    {
-        mpz_divexact(tmp, m, d);
-        if (mpz_cmp(tmp, d) < 0)
-        {
-            mpz_set(p1, tmp);
-            mpz_set(p2, d);
-        }
-        else
-        {
-            mpz_set(p1, d);
-            mpz_set(p2, tmp);
-        }
-    }
-
-    mpz_clears(d, tmp, NULL);
 }

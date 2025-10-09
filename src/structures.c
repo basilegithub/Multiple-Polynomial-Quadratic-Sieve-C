@@ -1,6 +1,7 @@
 #include <gmp.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "structures.h"
 #include "utils.h"
@@ -10,6 +11,7 @@ void init(dyn_array* array)
 	array->start = calloc(1, sizeof(mpz_t));
 	array->len = 0;
 	array->size = 1;
+    array->initialized = 0;
 }
 
 void init_classic(dyn_array_classic* array)
@@ -32,6 +34,7 @@ void init_len(dyn_array* array, unsigned long length)
 	while (array->size <= length) array->size <<= 1;
 	array->start = calloc(array->size, sizeof(mpz_t));
 	array->len = length;
+    array->initialized = 0;
 }
 
 void init_len_classic(dyn_array_classic* array, unsigned long length)
@@ -57,6 +60,7 @@ void init2_len(dyn_array* array, unsigned long length)
 	array->start = calloc(array->size, sizeof(mpz_t));
 	array->len = length;
 	for (unsigned long i = 0 ; i < length ; i++) mpz_init(*(array->start+i));
+    array->initialized = length;
 }
 
 void append(dyn_array* array, mpz_t element)
@@ -67,7 +71,28 @@ void append(dyn_array* array, mpz_t element)
         array->start = realloc(array->start, sizeof(mpz_t)*(array->size));
     }
     mpz_init_set(*(array->start+array->len), element);
-    array->len++;int mpz_equal(const mpz_t a, const mpz_t b);
+    array->len++;
+    array->initialized++;
+}
+
+void append_eco(dyn_array* array, mpz_t element)
+{
+    if (array->size <= array->len)
+    {
+        array->size <<= 1;
+        array->start = realloc(array->start, sizeof(mpz_t)*(array->size));
+    }
+
+    if (array->len == array->initialized)
+    {
+        mpz_init_set(*(array->start+array->len), element);
+        array->initialized++;
+    }
+    else
+    {
+        mpz_set(*(array->start+array->len), element);
+    }
+    array->len++;
 }
 
 void append_only(dyn_array* array, mpz_t element)
@@ -133,17 +158,18 @@ void delete_classic(dyn_array_classic* array, unsigned long index)
     array->len--;
 }
 
-void delete_classic_first(dyn_array_classic* array)
-{
-    array->start++;
-    array->len--;
-}
-
 void delete_dyn(dyn_array* array, unsigned long index)
 {
     for (unsigned long i = index ; i < array->len-1 ; i++) mpz_set(*(array->start+i), *(array->start+i+1));
     array->len--;
     mpz_clear(*(array->start + array->len));
+    array->initialized--;
+}
+
+void delete_dyn_eco(dyn_array* array, unsigned long index)
+{
+    for (unsigned long i = index ; i < array->len-1 ; i++) mpz_set(*(array->start+i), *(array->start+i+1));
+    array->len--;
 }
 
 void delete_dyn_unsorted(dyn_array* array, unsigned long index)
@@ -151,12 +177,7 @@ void delete_dyn_unsorted(dyn_array* array, unsigned long index)
     array->len--;
     mpz_set(*(array->start+index), *(array->start+array->len));
     mpz_clear(*(array->start + array->len));
-}
-
-void delete_dyn_first(dyn_array* array)
-{
-    array->start++;
-    array->len--;
+    array->initialized--;
 }
 
 void insert(dyn_array* array, mpz_t element, unsigned long index)
@@ -173,6 +194,7 @@ void insert(dyn_array* array, mpz_t element, unsigned long index)
     }
     mpz_set(*(array->start+index), element);
     array->len++;
+    array->initialized++;
 }
 
 void insert_classic(dyn_array_classic* array, unsigned long element, unsigned long index)
@@ -213,6 +235,7 @@ void insert_block(dyn_array* array, unsigned long index, unsigned long block_len
         mpz_set(*(array->start+index+i), element[i]);
     }
     array->len += block_len;
+    array->initialized++;
 }
 
 void reset(dyn_array* array)
@@ -224,7 +247,7 @@ void free_dyn_array(dyn_array* array) {
     if (!array || !array->start) return;  // safety check
 
     // Clear each GMP integer
-    for (unsigned long i = 0; i < array->len; i++) {
+    for (unsigned long i = 0; i < array->initialized; i++) {
         mpz_clear(array->start[i]);
     }
 
@@ -235,6 +258,7 @@ void free_dyn_array(dyn_array* array) {
     array->start = NULL;
     array->len = 0;
     array->size = 0;
+    array->initialized = 0;
 }
 
 int is_present(dyn_array* array, mpz_t element)
@@ -299,7 +323,7 @@ void hashmap_1d_put(Hashmap_1D *hashmap, const mpz_t key, const mpz_t value) {
     HashNode1D *node = hashmap->table[index];
 
     while (node) {
-        if (mpz_cmp(node->key, key) == 0) {
+        if (!mpz_cmp(node->key, key)) {
             mpz_set(node->value, value); // update existing
             return;
         }
@@ -319,8 +343,22 @@ bool hashmap_1d_get(Hashmap_1D *hashmap, const mpz_t key, mpz_t output) {
     HashNode1D *node = hashmap->table[index];
 
     while (node) {
-        if (mpz_cmp(node->key, key) == 0) {
+        if (!mpz_cmp(node->key, key)) {
             mpz_set(output, node->value);
+            return true;  // found
+        }
+        node = node->next;
+    }
+
+    return false; // not found
+}
+
+bool hashmap_1d_is_present(Hashmap_1D *hashmap, const mpz_t key) {
+    size_t index = hash_1d_mpz_strong(hashmap, key);
+    HashNode1D *node = hashmap->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
             return true;  // found
         }
         node = node->next;
@@ -345,6 +383,104 @@ void hashmap_1d_free(Hashmap_1D *hashmap) {
     hashmap->buckets = 0;
 }
 
+// Graph hashmap functions
+
+void hashmap_graph_create(Hashmap_graph *hashmap, const size_t buckets)
+{
+    hashmap->buckets = buckets;
+    hashmap->table = calloc(hashmap->buckets, sizeof(HashNodeGraph*));
+    if (!hashmap->table) {
+        exit(EXIT_FAILURE);
+    }
+}
+
+size_t hash_graph_mpz_strong(const Hashmap_graph *hashmap, const mpz_t key)
+{
+    return (size_t) mpz_fdiv_ui(key, hashmap->buckets);
+}
+
+void hashmap_graph_put(Hashmap_graph *hashmap, const mpz_t key, mpz_t value)
+{
+    size_t index = hash_graph_mpz_strong(hashmap, key);
+    HashNodeGraph *node = hashmap->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            append(&node->value, value); // Append to existing dynamic array
+            return;
+        }
+        node = node->next;
+    }
+
+    // not found → create a new dynamic array and put the value in it
+    node = malloc(sizeof(HashNodeGraph));
+    init(&node->value);
+    mpz_init_set(node->key, key);
+    append(&node->value, value);
+    node->next = hashmap->table[index];
+    hashmap->table[index] = node;
+}
+
+bool hashmap_graph_is_present(Hashmap_graph *hashmap, const mpz_t key)
+{
+    size_t index = hash_graph_mpz_strong(hashmap, key);
+    HashNodeGraph *node = hashmap->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            return true;  // found
+        }
+        node = node->next;
+    }
+
+    return false; // not found
+}
+
+void hashmap_graph_get(Hashmap_graph *hashmap, const mpz_t key, dyn_array *output)
+{
+    size_t index = hash_graph_mpz_strong(hashmap, key);
+    HashNodeGraph *node = hashmap->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            output = &node->value;
+            return;
+        }
+        node = node->next;
+    }
+    return;  // not found
+}
+
+dyn_array* hashmap_graph_get_ptr(Hashmap_graph *hashmap, const mpz_t key)
+{
+    size_t index = hash_graph_mpz_strong(hashmap, key);
+    HashNodeGraph *node = hashmap->table[index];
+
+    while (node) {
+        if (mpz_cmp(node->key, key) == 0) {
+            return &node->value;  // return pointer to internal array
+        }
+        node = node->next;
+    }
+    return NULL;  // not found
+}
+
+void hashmap_graph_free(Hashmap_graph *hashmap) {
+    for (size_t i = 0; i < hashmap->buckets; i++) {
+        HashNodeGraph *node = hashmap->table[i];
+        while (node) {
+            HashNodeGraph *next = node->next;
+            mpz_clear(node->key);
+            free_dyn_array(&node->value);
+            free(node);
+            node = next;
+        }
+    }
+    free(hashmap->table);
+    hashmap->table = NULL;
+    hashmap->buckets = 0;
+}
+
 // 2D Hashmap functions
 
 void hashmap_2d_create(Hashmap_PartialRelation *partial_relations, const size_t buckets)
@@ -358,39 +494,19 @@ void hashmap_2d_create(Hashmap_PartialRelation *partial_relations, const size_t 
 
 void hashmap_2d_compute_key(const unsigned long small_p, const unsigned long big_p, mpz_t key)
 {
-    mpz_t big_mpz, pow10;
-    mpz_init_set_ui(big_mpz, big_p);
-    mpz_init(pow10);
-
-    // Get number of decimal digits of big_p
-    size_t digits = mpz_sizeinbase(big_mpz, 10);
-
-    // pow10 = 10^digits
-    mpz_ui_pow_ui(pow10, 10, digits);
-
-    // key = small_p * pow10 + big_p
-    mpz_mul_ui(key, pow10, small_p);
-    mpz_add(key, key, big_mpz);
-
-    mpz_clears(big_mpz, pow10, NULL);
+    mpz_t tmp;
+    mpz_init_set_ui(tmp, big_p);
+    size_t bits = mpz_sizeinbase(tmp, 2);    
+    mpz_set_ui(tmp, small_p);  // bits required
+    mpz_mul_2exp(key, tmp, bits);            // key = small_p << bits
+    mpz_add_ui(key, key, big_p);                    // key += big_p
 }
 
 void hashmap_2d_compute_key_from_mpz(const mpz_t small_p, const mpz_t big_p, mpz_t key)
 {
-    mpz_t pow10;
-    mpz_init(pow10);
-
-    // Get number of decimal digits of big_p
-    size_t digits = mpz_sizeinbase(big_p, 10);
-
-    // pow10 = 10^digits
-    mpz_ui_pow_ui(pow10, 10, digits);
-
-    // key = small_p * pow10 + big_p
-    mpz_mul(key, pow10, small_p);
-    mpz_add(key, key, big_p);
-
-    mpz_clear(pow10);
+    size_t bits = mpz_sizeinbase(big_p, 2);      // bits required
+    mpz_mul_2exp(key, small_p, bits);            // key = small_p << bits
+    mpz_add(key, key, big_p);                    // key += big_p
 }
 
 size_t hash_2d_mpz_strong(const Hashmap_PartialRelation *partial_relations, const mpz_t key) {
@@ -535,4 +651,50 @@ void hashmap_2d_free(Hashmap_PartialRelation *partial_relations) {
     free(partial_relations->table);
     partial_relations->table = NULL;
     partial_relations->buckets = 0;
+}
+
+// Stack functions
+
+void stack_init(dyn_array_stack *stack)
+{
+    stack->data = malloc(sizeof(stack_node) * 4);  // initial capacity
+    stack->size = 0;
+    stack->capacity = 4;
+}
+
+void stack_push(dyn_array_stack *stack, const dyn_array *neighbors, const mpz_t parent)
+{
+    if (stack->size == stack->capacity) {
+        stack->capacity *= 2;
+        stack->data = realloc(stack->data, sizeof(stack_node) * stack->capacity);
+    }
+
+    stack->data[stack->size].neighbors = neighbors;
+    stack->data[stack->size].next_index = 0;  // start at first neighbor
+    mpz_init_set(stack->data[stack->size].parent, parent); // store parent index to skip
+    stack->size++;
+}
+
+void stack_pop(dyn_array_stack *stack)
+{
+    mpz_clear(stack->data[--stack->size].parent);
+}
+
+void stack_reset(dyn_array_stack *stack)
+{
+    for (size_t i = 0; i < stack->size; i++)
+        mpz_clear(stack->data[i].parent);
+
+    stack->size = 0;
+}
+
+void stack_free(dyn_array_stack *stack)
+{
+    for (size_t i = 0; i < stack->size; i++)
+        mpz_clear(stack->data[i].parent);
+
+    free(stack->data);
+    stack->data = NULL;
+    stack->size = 0;
+    stack->capacity = 0;
 }
