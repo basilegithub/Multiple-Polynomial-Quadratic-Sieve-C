@@ -276,7 +276,7 @@ bool fermat_primality(mpz_t n)
     mpz_sub_ui(exponent, n, 1);
 
     mpz_powm(res, base, exponent, n);
-    bool to_return = (bool) mpz_cmp_ui(res, 1) == 0;
+    bool to_return = (bool) !mpz_cmp_ui(res, 1);
 
     mpz_clears(res, base, exponent, NULL);
 

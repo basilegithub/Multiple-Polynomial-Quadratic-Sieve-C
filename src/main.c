@@ -546,7 +546,7 @@ int main()
         mpz_div_ui(tmp2,tmp2,8);
         mpz_neg(tmp2,tmp2);
 
-        long double tmp_skipped = 30;
+        long double tmp_skipped = 0;
         for (unsigned long i = 0 ; i < prime_start ; i++)
         {
             mpf_set_ui(tmp_long1,logs[i]);
@@ -555,7 +555,7 @@ int main()
             if (my_legendre(n,*(primes.start+i)) == 1) tmp_skipped += 2*mpf_get_d(tmp_long1);
             else tmp_skipped += mpf_get_d(tmp_long1);
         }
-        mpz_set(tmp,cst);
+        mpz_set(tmp,cst2);
         my_int_log2(tmp);
         tmp_skipped += mpz_get_d(tmp);
 

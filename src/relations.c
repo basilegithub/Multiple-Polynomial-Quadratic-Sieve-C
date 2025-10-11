@@ -112,8 +112,6 @@ bool find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path,
         }
     }
 
-    printf("miss\n\n\n");
-
     return DFS(graph, small_p, big_p, path, stack);
 }
 

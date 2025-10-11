@@ -13,7 +13,7 @@ This project is a C implementation of the Quadratic Sieve to factor integers.
 Here are some detailed characteristics :
 - Small multiplier used
 - Multiple polynomials used for sieving
-- Single large prime variation used to collect relations
+- Double large prime variation used to collect relations
 - Batch smoothness and trial division tests available
 - 1 cpu or parallel sieving available
 - Wiedemann algorithm or gaussian elimination available for the linear algebra step
@@ -83,8 +83,7 @@ Here are some points I consider working on at some point:
 
 Here are the next steps:
 
-- I still have to implement many features : adding block Lanczos algorithm for the linear algebra step,
-	use double large prime variation.
+- I still have to implement one last feature : adding block Lanczos algorithm for the linear algebra.
 
 - I have to continue cleaning up the code.
 
