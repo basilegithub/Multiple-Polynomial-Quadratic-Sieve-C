@@ -83,7 +83,7 @@ bool find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path,
         init(&path_big_p_to_one);
         // We excpect the node one to be a hub, thus it is more efficient to try to connect each prime to one
         // Otherwise we would need to "get out" of the node one, which has many neighbors
-
+    
         if (DFS(graph, tmp, small_p, &path_small_p_to_one, stack))
         {
             if (DFS(graph, tmp, big_p, &path_big_p_to_one, stack))
@@ -111,6 +111,8 @@ bool find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path,
             }
         }
     }
+
+    printf("miss\n\n\n");
 
     return DFS(graph, small_p, big_p, path, stack);
 }
@@ -142,22 +144,21 @@ void combine_path(Hashmap_PartialRelation *partial_relations, dyn_array path, mp
         mpz_mul(tmp3, res_x, to_combine_node->x);
         mpz_mod(res_x, tmp3, n);
 
-        mpz_mul(tmp3,to_combine_node->x, to_combine_node->x);
-        mpz_sub(tmp3, tmp3, n);
+        // mpz_mul(tmp3,to_combine_node->x, to_combine_node->x);
+        // mpz_sub(tmp3, tmp3, n);
     }
 
-
-    mpz_mul(tmp3, res_x, res_x);
-    mpz_mod(tmp3, tmp3, n);
-    mpz_mod(tmp4, res_y, n);
+    // mpz_mul(tmp3, res_x, res_x);
+    // mpz_mod(tmp3, tmp3, n);
+    // mpz_mod(tmp4, res_y, n);
 
     for (size_t i = 0 ; i < path.len ; i++)
     {
         mpz_set(tmp3, *(path.start+i));
         if (mpz_cmp_ui(tmp3, 1))
         {
-            mpz_divexact(res_y, res_y, tmp3);
-            mpz_divexact(res_y, res_y, tmp3);
+            mpz_mul(tmp4, tmp3, tmp3);
+            mpz_divexact(res_y, res_y, tmp4);
 
             mpz_invert(tmp3, tmp3, n);
             mpz_mul(tmp4, tmp3, res_x);
@@ -165,9 +166,9 @@ void combine_path(Hashmap_PartialRelation *partial_relations, dyn_array path, mp
         }
     }
 
-    mpz_mul(tmp3, res_x, res_x);
-    mpz_mod(tmp3, tmp3, n);
-    mpz_mod(tmp4, res_y, n);
+    // mpz_mul(tmp3, res_x, res_x);
+    // mpz_mod(tmp3, tmp3, n);
+    // mpz_mod(tmp4, res_y, n);
     
     mpz_clears(tmp, tmp2, tmp3, tmp4, NULL);
 }
@@ -237,9 +238,9 @@ void handle_relations(
                 if (!flag_small_prime) // We have never seen small_p
                 {
                     mpz_set((tmp_array+k)->x, value);
-                    mpz_mul(tmp,value,value);
-                    mpz_sub(value,tmp,n);
-                    mpz_set((tmp_array+k)->y, value);
+                    mpz_mul(tmp, value, value);
+                    mpz_sub(tmp, tmp, n);
+                    mpz_set((tmp_array+k)->y, tmp);
                     hashmap_2d_put_node(partial_relations, *(tmp_array+k));
                     (*indexp)++;
 
@@ -269,8 +270,8 @@ void handle_relations(
 
                         mpz_set((tmp_array+k)->x, value);
                         mpz_mul(tmp,value,value);
-                        mpz_sub(value,tmp,n);
-                        mpz_set((tmp_array+k)->y, value);
+                        mpz_sub(tmp,tmp,n);
+                        mpz_set((tmp_array+k)->y, tmp);
                         hashmap_2d_put_node(partial_relations, *(tmp_array+k));
                         (*indexp)++;
                     }
@@ -288,7 +289,7 @@ void handle_relations(
                             hashmap_1d_get(parent, tmp, tmp2); // tmp2 = parent[tmp] = parent[parent[parent_small_p]]
                             hashmap_1d_put(parent, parent_small_p, tmp2); // parent[parent_small_p] = tmp2 = parent[parent[parent_small_p]]
                             mpz_set(parent_small_p, tmp); // parent_small_p = parent[parent_small_p]
-                            hashmap_1d_get(parent, parent_small_p, tmp);
+                            mpz_set(tmp, tmp2);
                         }
 
                         hashmap_1d_get(parent, parent_big_p, tmp);
@@ -298,7 +299,7 @@ void handle_relations(
                             hashmap_1d_get(parent, tmp, tmp2);
                             hashmap_1d_put(parent, parent_big_p, tmp2);
                             mpz_set(parent_big_p, tmp);
-                            hashmap_1d_get(parent, parent_big_p, tmp);
+                            mpz_set(tmp, tmp2);
                         }
 
                         mpz_clear(tmp2);
@@ -313,8 +314,8 @@ void handle_relations(
 
                             mpz_set((tmp_array+k)->x, value);
                             mpz_mul(tmp,value,value);
-                            mpz_sub(value,tmp,n);
-                            mpz_set((tmp_array+k)->y, value);
+                            mpz_sub(tmp,tmp,n);
+                            mpz_set((tmp_array+k)->y, tmp);
                             hashmap_2d_put_node(partial_relations, *(tmp_array+k));
                             (*indexp)++;
                         }

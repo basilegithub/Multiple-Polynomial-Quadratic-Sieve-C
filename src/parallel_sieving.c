@@ -158,6 +158,11 @@ void parallel_sieve(
             mpz_t tmp_poly,tmp_poly2;
             mpz_init(tmp_poly);
             mpz_init(tmp_poly2);
+
+            gmp_randstate_t state;
+            gmp_randinit_default(state);
+            gmp_randseed_ui(state, (unsigned long)time(NULL));
+
             while(1)
             {
                 if (relations->len >= dim+20+addup) break;
@@ -208,11 +213,11 @@ void parallel_sieve(
                     {
                         if (flag_batch_smooth)
                         {
-                            batch_smooth(&to_batch,&batch_array,tmp_array,prod_primes,cst,cst2,prime);
+                            batch_smooth(&to_batch,&batch_array,tmp_array,prod_primes,cst,cst2,prime,state);
                         }
                         else
                         {
-                            naive_smooth(&to_batch, tmp_array, primes, cst, cst2);
+                            naive_smooth(&to_batch, tmp_array, primes, cst, cst2, state);
                         }
                         
                         #pragma omp critical
@@ -295,6 +300,7 @@ void parallel_sieve(
                 for (unsigned long i = 0 ; i < sieve_array.len ; i++) *(sieve_array.start+i) = 0;
                 reset(&tmp_block);
             }
+            gmp_randclear(state);
             for (unsigned long i = 0 ; i < batch_array.len ; i++) mpz_clear(*(batch_array.start+i));
             free(batch_array.start);
             batch_array.start = NULL;

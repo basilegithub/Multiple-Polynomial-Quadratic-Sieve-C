@@ -276,8 +276,11 @@ bool fermat_primality(mpz_t n)
     mpz_sub_ui(exponent, n, 1);
 
     mpz_powm(res, base, exponent, n);
+    bool to_return = (bool) mpz_cmp_ui(res, 1) == 0;
 
-    return (bool) mpz_cmp_ui(res, 1) == 0;
+    mpz_clears(res, base, exponent, NULL);
+
+    return to_return;
 }
 
 void multiply(const unsigned long n, const unsigned long index, const dyn_array_classic A, const bool b[n], bool res[n])
