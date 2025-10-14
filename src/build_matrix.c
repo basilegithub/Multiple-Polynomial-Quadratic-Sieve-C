@@ -15,7 +15,7 @@ void build_sparse_matrix(dyn_array_classic* matrix, dyn_array relations, dyn_arr
 
     for (size_t i = 0 ; i < relations.len ; i++)
     {
-        if (mpz_cmp_ui(*(relations.start+i), 0) < 0)
+        if (mpz_cmp_ui(relations.start[i], 0) < 0)
         {
             append_classic(matrix, i);
             (*nonzero_count)++;
@@ -31,11 +31,11 @@ void build_sparse_matrix(dyn_array_classic* matrix, dyn_array relations, dyn_arr
 
     for (size_t i = 0 ; i < factor_base.len ; i++)
     {
-        mpz_set_ui(current_prime, *(factor_base.start+i));
+        mpz_set_ui(current_prime, factor_base.start[i]);
 
         for (size_t j = 0 ; j < relations.len ; j++)
         {
-            bit_count = mpz_remove(tmp_mpz, *(relations.start+j), current_prime);
+            bit_count = mpz_remove(tmp_mpz, relations.start[j], current_prime);
             parity_bit = bit_count&1;
 
             if (parity_bit)
