@@ -3,87 +3,89 @@
 
 #include "structures.h"
 
-void build_sparse_matrix(dyn_array_classic* A, dyn_array relations, dyn_array_classic primes, unsigned long *nonzero, double *density, unsigned long *nb_lines, dyn_array_classic* rel_weight)
+void build_sparse_matrix(dyn_array_classic* matrix, dyn_array relations, dyn_array_classic factor_base, unsigned long *nonzero_count, double *density, unsigned long *row_count, dyn_array_classic* rel_weight)
 {
-    for (unsigned long i = 0 ; i < relations.len ; i++) append_classic(rel_weight,0);
-    *nonzero = 0;
-    *nb_lines = 0;
-    mpz_t tmp2;
-    mpz_init(tmp2);
-    for (unsigned long i = 0 ; i < relations.len ; i++)
+    mpz_t current_prime, tmp_mpz;
+    mpz_inits(current_prime, tmp_mpz, NULL);
+
+    *nonzero_count = 0;
+    *row_count = 0;
+
+    for (size_t i = 0 ; i < relations.len ; i++) append_classic(rel_weight, 0);
+
+    for (size_t i = 0 ; i < relations.len ; i++)
     {
-        if (mpz_cmp_ui(*(relations.start+i),0) < 0)
+        if (mpz_cmp_ui(*(relations.start+i), 0) < 0)
         {
-            append_classic(A,i);
-            *nonzero += 1;
-            *(rel_weight->start+i) += 1;
+            append_classic(matrix, i);
+            (*nonzero_count)++;
+            rel_weight->start[i]++;
         }
     }
-    append_classic(A,relations.len);
-    *nb_lines += 1;
-    for (unsigned long i = 0 ; i < primes.len ; i++)
+
+    append_classic(matrix, relations.len);
+    (*row_count)++;
+
+    bool parity_bit;
+    unsigned int bit_count;
+
+    for (size_t i = 0 ; i < factor_base.len ; i++)
     {
-        for (unsigned long j = 0 ; j < relations.len ; j++)
+        mpz_set_ui(current_prime, *(factor_base.start+i));
+
+        for (size_t j = 0 ; j < relations.len ; j++)
         {
-            unsigned long tmp = 0;
-            mpz_set_ui(tmp2,*(primes.start+i));
-            while (mpz_divisible_p(*(relations.start+j),tmp2))
+            bit_count = mpz_remove(tmp_mpz, *(relations.start+j), current_prime);
+            parity_bit = bit_count&1;
+
+            if (parity_bit)
             {
-                tmp ^= 1;
-                mpz_mul_ui(tmp2,tmp2,*(primes.start+i));
-            }
-            if (tmp)
-            {
-                append_classic(A,j);
-                *nonzero += 1;
-                *(rel_weight->start+j) += 1;
+                append_classic(matrix, j);
+                (*nonzero_count)++;
+                rel_weight->start[j]++;
             }
         }
-        if (*(A->start+A->len-1) != relations.len)
+        if (*(matrix->start + matrix->len - 1) != relations.len)
         {
-            append_classic(A,relations.len);
-            *nb_lines += 1;
+            append_classic(matrix, relations.len);
+            (*row_count)++;
         }
     }
-    *density = (double) (*nonzero)/(*nb_lines);
-    mpz_clear(tmp2);
+    *density = (double) (*nonzero_count)/(*row_count);
+    mpz_clears(current_prime, tmp_mpz, NULL);
 }
 
-void build_dense_matrix(dyn_array relations, dyn_array_classic primes, unsigned long relations_len, unsigned long base_size, mpz_t *dense_matrix)
+void build_dense_matrix(dyn_array relations, dyn_array_classic factor_base, unsigned long relations_len, unsigned long base_size, mpz_t *dense_matrix)
 {
 
-    mpz_t tmp, tmp2;
-    mpz_inits(tmp, tmp2, NULL);
+    mpz_t accumulator, current_prime, tmp_mpz;
+    mpz_inits(accumulator, current_prime, tmp_mpz, NULL);
 
     mpz_t * restrict DM = dense_matrix;
     mpz_t * restrict RELS = relations.start;
-    unsigned long * restrict PRIMES = primes.start;
+    unsigned long * restrict PRIMES = factor_base.start;
 
-    unsigned long tmp_char;
+    bool parity_bit;
+    unsigned int bit_count;
 
-    for (unsigned long i = 0 ; i < relations_len ; i++)
+    for (size_t i = 0 ; i < relations_len ; i++)
     {
-        if (mpz_cmp_ui(*(RELS+i), 0) < 0) mpz_set_ui(tmp, 1);
-        else mpz_set_ui(tmp, 0);
+        if (mpz_cmp_ui(RELS[i], 0) < 0) mpz_set_ui(accumulator, 1);
+        else mpz_set_ui(accumulator, 0);
 
-        for (unsigned long j = 0 ; j < primes.len ; j++)
+        for (size_t j = 0 ; j < factor_base.len ; j++)
         {
-            mpz_mul_2exp(tmp, tmp, 1);
+            mpz_set_ui(current_prime, PRIMES[j]);
+            mpz_mul_2exp(accumulator, accumulator, 1);
 
-            tmp_char = 0;
-            mpz_set_ui(tmp2, *(PRIMES+j));
+            bit_count = mpz_remove(tmp_mpz, RELS[i], current_prime);
+            parity_bit = bit_count&1;
 
-            while (mpz_divisible_p(*(RELS+i), tmp2))
-            {
-                tmp_char ^= 1;
-                mpz_mul_ui(tmp2, tmp2, *(PRIMES+j));
-            }
-
-            mpz_add_ui(tmp, tmp, tmp_char);
+            mpz_add_ui(accumulator, accumulator, parity_bit);
         }
 
-        mpz_set(DM[i], tmp);
+        mpz_set(DM[i], accumulator);
 
     }
-    mpz_clears(tmp, tmp2, NULL);
+    mpz_clears(accumulator, current_prime,  tmp_mpz, NULL);
 }
