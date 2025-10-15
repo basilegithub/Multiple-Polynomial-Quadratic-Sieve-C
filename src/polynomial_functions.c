@@ -109,14 +109,13 @@ void create_polynomial(mpz_t a, dyn_array* sol_needed, dyn_array* second_part, d
 
 void CRT(mpz_t res, dyn_array* moduli, mpz_t a, dyn_array* second_part)
 {
-    mpz_t sum,tmp;
-    mpz_init_set_ui(sum,0);
-    mpz_init(tmp);
+    mpz_t total;
+    mpz_init_set_ui(total, 0);
+
     for (unsigned long i = 0 ; i < moduli->len ; i++)
     {
-        mpz_mul(tmp,*(moduli->start+i),*(second_part->start+i));
-        mpz_add(sum,sum,tmp);
+        mpz_addmul(total, moduli->start[i], second_part->start[i]);
     }
-    mpz_mod(res,sum,a);
-    mpz_clears(sum,tmp,NULL);
+    mpz_mod(res, total, a);
+    mpz_clear(total);
 }
