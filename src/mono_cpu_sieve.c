@@ -144,6 +144,10 @@ void mono_cpu_sieve(
     gmp_randinit_default(state);
     gmp_randseed_ui(state, (unsigned long)time(NULL));
 
+    mpz_t prod_primes_p1;
+    mpz_init(prod_primes_p1);
+    mpz_add_ui(prod_primes_p1, prod_primes_p1, 1);
+
     while(1)
     {
         if (relations->len >= dim+20+addup) break;
@@ -194,7 +198,7 @@ void mono_cpu_sieve(
             {
                 if (flag_batch_smooth)
                 {
-                    batch_smooth(&to_batch,&batch_array,tmp_array,prod_primes,cst,cst2,prime,state);
+                    batch_smooth(&to_batch,&batch_array,tmp_array,prod_primes,prod_primes_p1,cst,cst2,prime,state);
                 }
                 else
                 {
