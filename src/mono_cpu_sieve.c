@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
+#include <math.h>
 
 #include "structures.h"
 #include "utils.h"
@@ -20,15 +22,15 @@ void mono_cpu_sieve(
     mpz_t cst,
     mpz_t cst2,
     mpz_t tmp_bin,
-    mpf_t nb_large,
+    double nb_large,
     mpf_t target,
     mpf_t ln2,
     mpf_t ln10,
     mpf_t e,
-    mpf_t var1,
-    mpf_t var2,
-    mpf_t var3,
-    mpf_t tmpf2,
+    double var1,
+    double var2,
+    double var3,
+    double tmpf2,
     unsigned long best_mult,
     unsigned long time_seed,
     unsigned long sieve_len,
@@ -68,7 +70,7 @@ void mono_cpu_sieve(
 
     dyn_array_small sieve_array;
     init_len_small(&sieve_array, sieve_len);
-    for (unsigned long i = 0 ; i < sieve_array.len ; i++) *(sieve_array.start+i) = 0;
+    memset(sieve_array.start, 0, sieve_len*sizeof(unsigned short));
 
     printf("sieve array size is %lu Bytes with %lu elements\n\n", sieve_array.len*sizeof(unsigned short int), sieve_array.len);
 
@@ -148,6 +150,8 @@ void mono_cpu_sieve(
     mpz_init(prod_primes_p1);
     mpz_add_ui(prod_primes_p1, prod_primes_p1, 1);
 
+    signed long *tmp_array_sieve = calloc(sieve_len, sizeof (signed long));
+
     while(1)
     {
         if (relations->len >= dim+20+addup) break;
@@ -179,7 +183,7 @@ void mono_cpu_sieve(
         mpz_sub(tmp_poly,tmp_poly,n);
         mpz_divexact(tmp_poly,tmp_poly,poly_a);
         mpz_set(poly_c,tmp_poly);
-        sieve(&sieve_array,sieve_len,half,&primes,logs,&a,n,poly_a,poly_b,poly_c,&inverse_a,&way_to_root,&locations,skipped,prime_start,&tmp_block,smooth_bound);
+        sieve(&sieve_array,sieve_len,half,&primes,logs,&a,n,poly_a,poly_b,poly_c,&inverse_a,&way_to_root,&locations,tmp_array_sieve,skipped,prime_start,&tmp_block,smooth_bound);
         for (unsigned long i = 0 ; i < tmp_block.len ; i++)
         {
             mpz_set(value,*(tmp_block.start+i));
@@ -251,27 +255,8 @@ void mono_cpu_sieve(
                 if (dim+20 >= relations->len)
                 {
                     objective = dim+20-relations->len;
-                    mpf_set_d(tmpf,rate2);
-                    mpf_set_ui(var1,objective);
-                    mpf_mul(var1,var1,nb_large);
-                    mpf_mul(var1,var1,tmpf);
-                    mpf_mul_2exp(var1, var1, 1);
 
-                    mpf_set_d(var2,rate1);
-                    mpf_mul(var2,var2,nb_large);
-
-                    mpf_set_ui(tmpf,*indexp);
-                    mpf_div(tmpf,tmpf,nb_large);
-                    mpf_set_d(tmpf2,rate2);
-                    mpf_mul(tmpf,tmpf,tmpf2);
-                    mpf_add(var2,var2,tmpf);
-                    mpf_mul(tmpf,var2,var2);
-                    mpf_add(tmpf,tmpf,var1);
-                    mpf_sqrt(tmpf,tmpf);
-                    mpf_sub(tmpf,tmpf,var2);
-                    mpf_set_d(var3,rate2);
-                    mpf_div(tmpf,tmpf,var3);
-                    seconds = mpf_get_ui(tmpf);
+                    seconds = (double)objective / (rate1 + rate2*rate2/nb_large);
                 }
 
                 printf("\r%lu/(%lu+20+%lu) relations found : full = %lu ; partial = %lu (%lu) (r1 = %.2f ; r2 = %.2f ; %luh %lum %lus left)",relations->len,dim,addup,*full_found,*partial_found,*indexp,rate1,rate2,seconds/3600,(seconds%3600)/60,(seconds%60));
@@ -279,7 +264,7 @@ void mono_cpu_sieve(
 
             }
         }
-        for (unsigned long i = 0 ; i < sieve_array.len ; i++) *(sieve_array.start+i) = 0;
+        memset(sieve_array.start, 0, sieve_len*sizeof(unsigned short));
         reset(&tmp_block);
     }
     gmp_randclear(state);

@@ -16,11 +16,13 @@ void sieve(dyn_array_small* sieve,
     const dyn_array* inverse_a,
     const dyn_array_classic* way_to_root,
     const dyn_array_classic* locations,
+    signed long *tmp_array,
     const unsigned long skipped,
     const unsigned long prime_start,
     dyn_array* smooth, 
     const unsigned long smooth_bound)
 {
+
     mpz_t z, tmp, inv_2b_mod_n;
     mpz_inits(z, tmp, inv_2b_mod_n, NULL);
     bool excluded;
@@ -91,13 +93,14 @@ void sieve(dyn_array_small* sieve,
             {
                 *ptr += log_weight;
             }
+
         }
     }
+
 
     mpz_t k;
     mpz_init(k);
 
-    signed long *tmp_array = calloc(length, sizeof (signed long));
     size_t tmp_count = 0;
 
     for (size_t x = L-1 ; --x ;)
