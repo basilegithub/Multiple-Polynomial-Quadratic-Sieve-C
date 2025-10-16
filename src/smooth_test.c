@@ -150,7 +150,7 @@ void build_remainder_tree(dyn_array* reported, dyn_array* tmp_array, mpz_t prod_
     {
         for (unsigned long i = 0 ; i < tmp_long ; i++)
         {
-            flag_overflow = mpz_cmp(tmp_array->start[stored_len-1-index2-(i<<1)], prod_primes_p1)
+            flag_overflow = !mpz_cmp(tmp_array->start[stored_len-1-index2-(i<<1)], prod_primes_p1);
             if (mpz_cmp(tmp_array->start[stored_len-1-index2-(i<<1)], prod_primes_p1))
             {
                 mpz_mod(tmp_array->start[stored_len-1-index2-(i<<1)], tmp_array->start[stored_len-1-index1-i], tmp_array->start[stored_len-1-index2-(i<<1)]);
@@ -248,44 +248,48 @@ void batch_smooth(dyn_array* reported, dyn_array* tmp_array, PartialRelation *tm
 
 void naive_smooth(dyn_array* reported, PartialRelation *tmp_array, dyn_array_classic primes, mpz_t limit, mpz_t limit_2, gmp_randstate_t state)
 {
-    mpz_t tmp, tmp2, tmp3;
-    mpz_init(tmp);
-    mpz_inits(tmp2, tmp3, NULL);
-    unsigned long i = 0;
+    mpz_t remaining_factor, prime_divisor_1, prime_divisor_2;
+    mpz_inits(remaining_factor, prime_divisor_1, prime_divisor_2, NULL);
 
-    for (mpz_t* ptr = reported->start ; ptr < reported->start+reported->len ; ptr++)
+    unsigned long div_count;
+    unsigned long max_prime = primes.start[primes.len-1];
+    bool flag_is_smooth;
+
+    for (size_t i = 0 ; i < reported->len ; i++)
     {
-        mpz_set(tmp, *ptr);
-        for (unsigned long i = 0 ; i < primes.len ; i++)
+        mpz_set(remaining_factor, reported->start[i]);
+        flag_is_smooth = false;
+        
+        for (unsigned long j = 0 ; j < primes.len ; j++)
         {
-            mpz_mod_ui(tmp2, tmp, primes.start[i]);
+            mpz_set_ui(prime_divisor_1, primes.start[j]);
+            div_count = mpz_remove(remaining_factor, remaining_factor, prime_divisor_1);
 
-            while (!mpz_cmp_ui(tmp2, 0))
+            if (div_count > 0 && mpz_cmp_ui(remaining_factor, max_prime) < 1)
             {
-                mpz_div_ui(tmp, tmp, primes.start[i]);
-                mpz_mod_ui(tmp2, tmp, primes.start[i]);
+                flag_is_smooth = true;
+                break;
             }
         }
 
-        if (!mpz_cmp_ui(tmp, 1))
+        if (flag_is_smooth)
         {
             mpz_set_ui((tmp_array+i)->small_p, 1);
             mpz_set_ui((tmp_array+i)->big_p, 1);
         }
-        else if (mpz_cmp(tmp, limit) < 1)
+        else if (mpz_cmp(remaining_factor, limit) < 1)
         {
             mpz_set_ui((tmp_array+i)->small_p, 1);
-            mpz_set((tmp_array+i)->big_p, tmp);
+            mpz_set((tmp_array+i)->big_p, remaining_factor);
         }
-        else if (mpz_cmp(tmp, limit_2) < 1 && !fermat_primality(tmp))
+        else if (mpz_cmp(remaining_factor, limit_2) < 1 && !fermat_primality(remaining_factor))
         {
-            pollard_rho(tmp, tmp2, tmp3, state);
-            mpz_set((tmp_array+i)->small_p, tmp2);
-            mpz_set((tmp_array+i)->big_p, tmp3);
+            pollard_rho(remaining_factor, prime_divisor_1, prime_divisor_2, state);
+            mpz_set((tmp_array+i)->small_p, prime_divisor_1);
+            mpz_set((tmp_array+i)->big_p, prime_divisor_2);
         }
         else mpz_set_ui((tmp_array+i)->small_p, 0);
 
-        i++;
     }
-    mpz_clears(tmp, tmp2, NULL);
+    mpz_clears(remaining_factor, prime_divisor_1, prime_divisor_2, NULL);
 }
