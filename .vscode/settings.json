@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "numbers": "c",
-        "omp.h": "c"
+        "omp.h": "c",
+        "polynomial_functions.h": "c"
     }
 }
