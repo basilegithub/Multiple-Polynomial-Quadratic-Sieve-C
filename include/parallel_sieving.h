@@ -17,15 +17,10 @@ void parallel_sieve(
     mpz_t cst,
     mpz_t cst2,
     mpz_t tmp_bin,
-    double nb_large,
     mpf_t target,
     mpf_t ln2,
     mpf_t ln10,
     mpf_t e,
-    double var1,
-    double var2,
-    double var3,
-    double tmpf2,
     unsigned long best_mult,
     unsigned long time_seed,
     unsigned long sieve_len,
@@ -51,6 +46,7 @@ void parallel_sieve(
     int* need_append,
     int nb_cpu_sieve,
     int flag_batch_smooth,
+    double nb_large,
     time_t second1,
     time_t second2
 );

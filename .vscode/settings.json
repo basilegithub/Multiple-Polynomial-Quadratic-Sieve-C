@@ -2,6 +2,7 @@
     "files.associations": {
         "numbers": "c",
         "omp.h": "c",
-        "polynomial_functions.h": "c"
+        "polynomial_functions.h": "c",
+        "limits": "c"
     }
 }
