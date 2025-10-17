@@ -302,6 +302,7 @@ void mono_cpu_sieve(
                 reset(&block);
                 reset(&to_batch);
                 reset(&coefficient);
+                
                 second2 = time(NULL);
                 time_diff = second2-second1;
                 if (time_diff == 0)
