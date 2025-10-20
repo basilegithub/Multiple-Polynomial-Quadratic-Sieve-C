@@ -7,52 +7,51 @@
 void reduce_relations(dyn_array* relations, dyn_array* smooth, dyn_array_classic* primes, mpz_t n)
 {
     unsigned long count;
-    unsigned long i = 0;
-    unsigned long index = 0,index2 = 0;
-    unsigned char tmp;
-    unsigned char flag = 1;
-    mpz_t tmp2;
-    mpz_init(tmp2);
-    while (flag)
+    unsigned long bit_count;
+    size_t index = 0, index2 = 0;
+    bool modified = true;
+
+    mpz_t tmp_mpz, tmp_mpz2;
+    mpz_inits(tmp_mpz, tmp_mpz2, NULL);
+
+    while (modified)
     {
-        flag = 0;
-        for (unsigned long i = 0 ; i < primes->len ; i++)
+        modified = false;
+        for (size_t i = 0 ; i < primes->len ; i++)
         {
+
             count = 0;
-            for (unsigned long j = 0 ; j < relations->len && count < 3 ; j++)
+            for (size_t j = 0 ; j < relations->len && count < 3 ; j++)
             {
-                tmp = 0;
-                mpz_set_ui(tmp2,*(primes->start+i));
-                while (mpz_divisible_p(*(relations->start+j),tmp2))
-                {
-                    tmp ^= 1;
-                    mpz_mul_ui(tmp2,tmp2,*(primes->start+i));
-                }
-                if (tmp)
+                mpz_set_ui(tmp_mpz, primes->start[i]);
+                bit_count = mpz_remove(tmp_mpz2, relations->start[j], tmp_mpz);
+                if (bit_count&1)
                 {
                     count++;
                     if (count == 1) index = j;
                     else index2 = j;
                 }
             }
+
             if (count == 1)
             {
-                delete_dyn_unsorted(relations,index);
-                delete_dyn_unsorted(smooth,index);
-                flag = 1;
+                delete_dyn_unsorted(relations, index);
+                delete_dyn_unsorted(smooth, index);
+                modified = true;
             }
             else if (count == 2)
             {
-                mpz_mul(*(relations->start+index),*(relations->start+index),*(relations->start+index2));
-                mpz_mul(*(smooth->start+index),*(smooth->start+index),*(smooth->start+index2));
-                mpz_mod(*(smooth->start+index),*(smooth->start+index),n);
-                delete_dyn_unsorted(relations,index2);
-                delete_dyn_unsorted(smooth,index2);
-                flag = 1;
+                mpz_mul(relations->start[index], relations->start[index], relations->start[index2]);
+                mpz_mul(smooth->start[index], smooth->start[index], smooth->start[index2]);
+                mpz_mod(smooth->start[index], smooth->start[index], n);
+
+                delete_dyn_unsorted(relations, index2);
+                delete_dyn_unsorted(smooth, index2);
+                modified = true;
             }
         }
     }
-    mpz_clear(tmp2);
+    mpz_clears(tmp_mpz, tmp_mpz2, NULL);
 }
 
 void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* smooth, unsigned long limit, mpz_t n, dyn_array_classic* rel_weight, unsigned long merge_bound)
