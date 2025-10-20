@@ -55,7 +55,212 @@ void reduce_relations(dyn_array* relations, dyn_array* smooth, dyn_array_classic
     mpz_clears(tmp_mpz, tmp_mpz2, NULL);
 }
 
-void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* smooth, unsigned long limit, mpz_t n, dyn_array_classic* rel_weight, unsigned long merge_bound)
+void bubble_sort_down(dyn_array_classic weights, dyn_array_classic *sorted, unsigned long tmp3)
+{
+    unsigned long tmp4;
+    while (tmp3 > 0 && weights.start[sorted->start[tmp3]] < weights.start[sorted->start[tmp3-1]])
+    {
+        tmp4 = sorted->start[tmp3-1];
+        sorted->start[tmp3-1] = sorted->start[tmp3];
+        sorted->start[tmp3] = tmp4;
+        tmp3--;
+    }
+}
+
+void bubble_sort_up(dyn_array_classic weights, dyn_array_classic *sorted, unsigned long tmp3)
+{
+    unsigned long tmp4;
+    while (tmp3 < sorted->len-1 && weights.start[sorted->start[tmp3]] > weights.start[sorted->start[tmp3+1]])
+    {
+        tmp4 = sorted->start[tmp3+1];
+        sorted->start[tmp3+1] = sorted->start[tmp3];
+        sorted->start[tmp3] = tmp4;
+        tmp3++;
+    }
+}
+
+size_t get_index(dyn_array_classic sorted, unsigned long line_index)
+{
+    for (size_t z = 0 ; z < sorted.len ; z++)
+    {
+        if (sorted.start[z] == line_index)
+        {
+            return z;
+        }
+    }
+}
+
+bool delete_empty_row(dyn_array_classic *matrix, dyn_array_classic *weights, dyn_array_classic *sorted, size_t i, unsigned long row_index)
+{
+    delete_classic(matrix, i);
+    delete_classic(weights, row_index);
+    size_t k = 0;
+    while (k < sorted->len)
+    {
+        if (sorted->start[k] == row_index) delete_classic(sorted, k);
+        else
+        {
+            if (sorted->start[k] > row_index) sorted->start[k]--;
+            k++;
+        }
+    }
+    return true;
+}
+
+void delete_singleton(dyn_array *relations, dyn_array *smooth, dyn_array_classic *matrix, dyn_array_classic *weights, dyn_array_classic *rel_weight, dyn_array_classic sorted, size_t i, unsigned long row_index, unsigned long row_delimiter)
+{
+    unsigned long tmp = matrix->start[i-1];
+    delete_classic(matrix, i);
+    delete_classic(matrix, i-1);
+    delete_dyn(relations, tmp);
+    delete_dyn(smooth, tmp);
+    delete_classic(rel_weight, tmp);
+    delete_classic(weights, row_index);
+    unsigned long tmp2 = 0;
+    size_t j = 0;
+
+    while (j < matrix->len)
+    {
+        if (matrix->start[j] == row_delimiter)
+        {
+            tmp2++;
+            j++;
+        }
+        else if (matrix->start[j] == tmp)
+        {
+            delete_classic(matrix, j);
+            weights->start[tmp2]--;
+
+            unsigned long tmp3 = get_index(sorted, tmp2);
+
+            bubble_sort_down(*weights, &sorted, tmp3); // update the sorted list of line weights
+        }
+        else
+        {
+            if (matrix->start[j] > tmp) matrix->start[j]--;
+            j++;
+        }
+    }
+
+    size_t k = 0;
+    while (k < sorted.len)
+    {
+        if (sorted.start[k] == row_index) delete_classic(&sorted, k);
+        else
+        {
+            if (sorted.start[k] > row_index) sorted.start[k]--;
+            k++;
+        }
+    }
+}
+
+void delete_to_elements_row(dyn_array *relations, dyn_array *smooth, dyn_array_classic *matrix, dyn_array_classic *rel_weight, dyn_array_classic sorted, dyn_array_classic *weights, mpz_t n, size_t i, unsigned long row_index, unsigned long row_delimiter)
+{
+    unsigned long pivot, remain, tmp2, tmp3;
+    size_t j;
+
+    pivot = matrix->start[i-2];
+    remain = matrix->start[i-1];
+
+    mpz_mul(relations->start[remain], relations->start[remain], relations->start[pivot]);
+    mpz_mul(smooth->start[remain], smooth->start[remain], smooth->start[pivot]);
+    mpz_mod(smooth->start[remain], smooth->start[remain], n);
+
+    delete_classic(matrix, i-2);
+    delete_classic(matrix, i-2);
+    delete_classic(matrix, i-2);
+    rel_weight->start[remain]--;
+
+    delete_dyn(relations, pivot);
+    delete_dyn(smooth, pivot);
+    delete_classic(rel_weight, pivot);
+    delete_classic(weights, row_index);
+
+    tmp2 = 0;
+    j = 0;
+    bool has_pivot = false;
+    while (j < matrix->len)
+    {
+        if (matrix->start[j] == row_delimiter)
+        {
+            if (has_pivot)
+            {
+                has_pivot = false;
+                insert_classic(matrix, remain-1, j);
+                rel_weight->start[remain-1]++;
+                weights->start[tmp2]++;
+
+                tmp3 = get_index(sorted, tmp2);
+
+                bubble_sort_up(*weights, &sorted, tmp3);
+                j++;
+            }
+            tmp2++;
+            j++;
+        }
+
+        else if (matrix->start[j] == pivot)
+        {
+            has_pivot = true;
+            delete_classic(matrix, j);
+            weights->start[tmp2]--;
+
+            tmp3 = get_index(sorted, tmp2);
+
+            bubble_sort_down(*weights, &sorted, tmp3); // update the sorted list of line weights
+        }
+
+        else if (matrix->start[j] == remain && has_pivot)
+        {
+            has_pivot = false;
+            delete_classic(matrix, j);
+            rel_weight->start[remain-1]--;
+            weights->start[tmp2]--;
+
+            tmp3 = get_index(sorted, tmp2);
+
+            bubble_sort_down(*weights, &sorted, tmp3);
+        }
+        else if (matrix->start[j] > remain && has_pivot)
+        {
+            has_pivot = false;
+            insert_classic(matrix, remain-1, j);
+            rel_weight->start[remain-1]++;
+            weights->start[tmp2]++;
+
+            tmp3 = get_index(sorted, tmp2);
+
+            bubble_sort_up(*weights, &sorted, tmp3); // update the sorted list of line weights
+            j++;
+        }
+        else
+        {
+            if (matrix->start[j] > pivot) matrix->start[j]--;
+            j++;
+        }
+    }
+
+    size_t k = 0;
+    while (k < sorted.len)
+    {
+        if (sorted.start[k] == row_index) delete_classic(&sorted, k);
+        else
+        {
+            if (sorted.start[k] > row_index) sorted.start[k]--;
+            k++;
+        }
+    }
+}
+
+/*
+ * reduce_matrix:
+ *   Simplifies a sparse matrix representing relations.
+ *   - Removes empty and singleton rows.
+ *   - Fuses 2-element rows into other rows.
+ *   - Maintains a sorted list of row weights.
+ *   - Merges lightweight rows below 'merge_bound'.
+ */
+void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* smooth, unsigned long row_delimiter, mpz_t n, dyn_array_classic* rel_weight, unsigned long merge_bound)
 {
     dyn_array_classic weights;
     init_classic(&weights);
@@ -64,20 +269,20 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
     init_classic(&sorted);
 
     unsigned long line_len = 0;
-    unsigned long place = 0;
+    unsigned long row_index = 0;
     unsigned long tmp, tmp2, tmp3 = 0;
     signed long tmp_index;
 
     for (size_t i = 0 ; i < matrix->len ; i++)
     {
-        if (matrix->start[i] == limit)
+        if (matrix->start[i] == row_delimiter)
         {
             append_classic(&weights, line_len);
-            if (weights.len == 1) append_classic(&sorted, place);
+            if (weights.len == 1) append_classic(&sorted, row_index);
             else
             {
                 signed long a = 0;
-                signed long b = place-1;
+                signed long b = row_index-1;
                 tmp_index = (a+b)/2;
                 tmp2 = sorted.start[tmp_index];
                 while (a <= b && weights.start[tmp2] != line_len)
@@ -87,11 +292,11 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
                     tmp_index = (a+b)/2;
                     tmp2 = sorted.start[tmp_index];
                 }
-                if (weights.start[tmp2] == line_len) insert_classic(&sorted, place, tmp_index);
-                else insert_classic(&sorted, place, a);
+                if (weights.start[tmp2] == line_len) insert_classic(&sorted, row_index, tmp_index);
+                else insert_classic(&sorted, row_index, a);
             }
             line_len = 0;
-            place++;
+            row_index++;
         }
         else line_len++;
     }
@@ -100,261 +305,52 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
     size_t i, j;
     unsigned long tmp4, k;
     unsigned long nb_lines;
-    bool flag = true;
+    bool changed = true;
     unsigned long pivot,remain;
 
-    while(flag)
+    while(changed)
     {
-        place = 0;
+        row_index = 0;
         nb_lines = 0;
-        flag = false;
+        changed = false;
         i = 0;
         line_len = 0;
         while (i < matrix->len)
         {
-            if (matrix->start[i] == limit)
+            if (matrix->start[i] == row_delimiter)
             {
                 if (line_len == 0) // delete empty row
                 {
-                    delete_classic(matrix, i);
-                    flag = true;
-                    delete_classic(&weights, place);
-                    k = 0;
-                    while (k < sorted.len)
-                    {
-                        if (sorted.start[k] == place) delete_classic(&sorted, k);
-                        else
-                        {
-                            if (sorted.start[k] > place) sorted.start[k]--;
-                            k++;
-                        }
-                    }
+                    changed = delete_empty_row(matrix, &weights, &sorted, i, row_index);
                 }
 
                 else if (line_len == 1) // delete singleton
                 {
-                    tmp = matrix->start[i-1];
-                    delete_classic(matrix, i);
-                    delete_classic(matrix, i-1);
-                    delete_dyn(relations, tmp);
-                    delete_dyn(smooth, tmp);
-                    delete_classic(rel_weight, tmp);
-                    delete_classic(&weights, place);
-                    tmp2 = 0;
-                    j = 0;
-
-                    while (j < matrix->len)
-                    {
-                        if (matrix->start[j] == limit)
-                        {
-                            tmp2++;
-                            j++;
-                        }
-                        else if (matrix->start[j] == tmp)
-                        {
-                            delete_classic(matrix, j);
-                            weights.start[tmp2]--;
-
-                            for (size_t z = 0 ; z < sorted.len ; z++)
-                            {
-                                if (sorted.start[z] == tmp2)
-                                {
-                                    tmp3 = z;
-                                    break;
-                                }
-                            }
-
-                            while (tmp3 > 0 && weights.start[sorted.start[tmp3]] < weights.start[sorted.start[tmp3-1]])
-                            {
-                                tmp4 = sorted.start[tmp3-1];
-                                sorted.start[tmp3-1] = sorted.start[tmp3];
-                                sorted.start[tmp3] = tmp4;
-                                tmp3--;
-                            }
-                        }
-                        else
-                        {
-                            if (matrix->start[j] > tmp) matrix->start[j]--;
-                            j++;
-                        }
-                    }
-
-                    k = 0;
-                    while (k < sorted.len)
-                    {
-                        if (sorted.start[k] == place) delete_classic(&sorted, k);
-                        else
-                        {
-                            if (sorted.start[k] > place) sorted.start[k]--;
-                            k++;
-                        }
-                    }
+                    delete_singleton(relations, smooth, matrix, &weights, rel_weight, sorted, i, row_index, row_delimiter);
 
                     line_len = 0;
                     i = 0;
                     nb_lines = 0;
-                    flag = true;
-                    place = 0;
+                    changed = true;
+                    row_index = 0;
                 }
 
                 else if (line_len == 2) // fuse row with only two elements
                 {
-                    pivot = matrix->start[i-2];
-                    remain = matrix->start[i-1];
-
-                    mpz_mul(relations->start[remain], relations->start[remain], relations->start[pivot]);
-                    mpz_mul( smooth->start[remain], smooth->start[remain], smooth->start[pivot]);
-                    mpz_mod(smooth->start[remain], smooth->start[remain], n);
-
-                    delete_classic(matrix, i-2);
-                    delete_classic(matrix, i-2);
-                    delete_classic(matrix, i-2);
-                    rel_weight->start[remain]--;
-
-                    delete_dyn(relations, pivot);
-                    delete_dyn(smooth, pivot);
-                    delete_classic(rel_weight, pivot);
-                    delete_classic(&weights, place);
-
-                    tmp2 = 0;
-                    j = 0;
-                    bool has_pivot = false;
-                    while (j < matrix->len)
-                    {
-                        if (matrix->start[j] == limit)
-                        {
-                            if (has_pivot)
-                            {
-                                has_pivot = false;
-                                insert_classic(matrix, remain-1, j);
-                                rel_weight->start[remain-1]++;
-                                weights.start[tmp2]++;
-
-                                for (size_t z = 0 ; z < sorted.len ; z++)
-                                {
-                                    if (sorted.start[z] == tmp2)
-                                    {
-                                        tmp3 = z;
-                                        break;
-                                    }
-                                }
-
-                                while (tmp3 < sorted.len-1 && weights.start[sorted.start[tmp3]] > weights.start[sorted.start[tmp3+1]])
-                                {
-                                    tmp4 = sorted.start[tmp3+1];
-                                    sorted.start[tmp3+1] = sorted.start[tmp3];
-                                    sorted.start[tmp3] = tmp4;
-                                    tmp3++;
-                                }
-                                j++;
-                            }
-                            tmp2++;
-                            j++;
-                        }
-
-                        else if (matrix->start[j] == pivot)
-                        {
-                            has_pivot = true;
-                            delete_classic(matrix, j);
-                            weights.start[tmp2]--;
-
-                            for (size_t z = 0 ; z < sorted.len ; z++)
-                            {
-                                if (sorted.start[z] == tmp2)
-                                {
-                                    tmp3 = z;
-                                    break;
-                                }
-                            }
-                            while (tmp3 > 0 && weights.start[sorted.start[tmp3]] < weights.start[sorted.start[tmp3-1]])
-                            {
-                                tmp4 = sorted.start[tmp3-1];
-                                sorted.start[tmp3-1] = sorted.start[tmp3];
-                                sorted.start[tmp3] = tmp4;
-                                tmp3--;
-                            }
-                        }
-
-                        else if (matrix->start[j] == remain && has_pivot)
-                        {
-                            has_pivot = false;
-                            delete_classic(matrix, j);
-                            rel_weight->start[remain-1]--;
-                            weights.start[tmp2]--;
-
-                            for (size_t z = 0 ; z < sorted.len ; z++)
-                            {
-                                if (sorted.start[z] == tmp2)
-                                {
-                                    tmp3 = z;
-                                    break;
-                                }
-                            }
-
-                            while (tmp3 > 0 && weights.start[sorted.start[tmp3]] < weights.start[sorted.start[tmp3-1]])
-                            {
-                                tmp4 = sorted.start[tmp3-1];
-                                sorted.start[tmp3-1] = sorted.start[tmp3];
-                                sorted.start[tmp3] = tmp4;
-                                tmp3--;
-                            }
-                        }
-                        else if (matrix->start[j] > remain && has_pivot)
-                        {
-                            has_pivot = false;
-                            insert_classic(matrix, remain-1, j);
-                            rel_weight->start[remain-1]++;
-                            weights.start[tmp2]++;
-
-                            for (size_t z = 0 ; z < sorted.len ; z++)
-                            {
-                                if (sorted.start[z] == tmp2)
-                                {
-                                    tmp3 = z;
-                                    break;
-                                }
-                            }
-
-                            while (tmp3 < sorted.len-1 && weights.start[sorted.start[tmp3]] > weights.start[sorted.start[tmp3+1]])
-                            {
-                                tmp4 = sorted.start[tmp3+1];
-                                sorted.start[tmp3+1] = sorted.start[tmp3];
-                                sorted.start[tmp3] = tmp4;
-                                tmp3++;
-                            }
-                            j++;
-                        }
-                        else
-                        {
-                            if (matrix->start[j] > pivot) matrix->start[j]--;
-                            j++;
-                        }
-                    }
-
-                    k = 0;
-                    while (k < sorted.len)
-                    {
-                        if (sorted.start[k] == place) delete_classic(&sorted, k);
-                        else
-                        {
-                            if (sorted.start[k] > place) sorted.start[k]--;
-                            k++;
-                        }
-                    }
-
+                    delete_to_elements_row(relations, smooth, matrix, rel_weight, sorted, &weights, n, i, row_index, row_delimiter);
 
                     line_len = 0;
                     i = 0;
                     nb_lines = 0;
-                    flag = true;
-                    place = 0;
+                    changed = true;
+                    row_index = 0;
                 }
                 else
                 {
                     i++;
                     line_len = 0;
                     nb_lines++;
-                    place++;
+                    row_index++;
                 }
             }
             else
@@ -366,21 +362,21 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 
         while (relations->len > nb_lines+15)
         {
-            flag = true;
-            place = 0;
+            changed = true;
+            row_index = 0;
             i = 0;
 
-            while (place != sorted.start[0])
+            while (row_index != sorted.start[0])
             {
-                if (matrix->start[i] == limit) place++;
+                if (matrix->start[i] == row_delimiter) row_index++;
                 i++;
             }
 
-            if (matrix->start[i] == limit)
+            if (matrix->start[i] == row_delimiter)
             {
                 delete_classic(matrix, i);
                 nb_lines--;
-                delete_classic(&weights, place);
+                delete_classic(&weights, row_index);
 
                 for (size_t z = 1 ; z < sorted.len ; z++)
                 {
@@ -391,7 +387,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 
             else
             {
-                weights.start[place]--;
+                weights.start[row_index]--;
                 tmp2 = matrix->start[i];
                 delete_classic(matrix, i);
                 delete_dyn(relations, tmp2);
@@ -402,7 +398,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 
                 while (k < matrix->len)
                 {
-                    if (matrix->start[k] == limit)
+                    if (matrix->start[k] == row_delimiter)
                     {
                         tmp++;
                         k++;
@@ -413,22 +409,9 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
                         delete_classic(matrix, k);
                         weights.start[tmp] -= 1;
 
-                        for (size_t z = 0 ; z < sorted.len ; z++)
-                        {
-                            if (sorted.start[z] == tmp)
-                            {
-                                tmp3 = z;
-                                break;
-                            }
-                        }
+                        tmp3 = get_index(sorted, tmp);
 
-                        while (tmp3 > 0 && weights.start[sorted.start[tmp3]] < weights.start[sorted.start[tmp3-1]])
-                        {
-                            tmp4 = sorted.start[tmp3-1];
-                            sorted.start[tmp3-1] = sorted.start[tmp3];
-                            sorted.start[tmp3] = tmp4;
-                            tmp3--;
-                        }
+                        bubble_sort_down(weights, &sorted, tmp3); // update the sorted list of line weights
                     }
                     else
                     {
@@ -450,7 +433,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
         tmp2 = 0;
 
         while (tmp2 != sorted.start[0]){
-            if (matrix->start[i] == limit) tmp2++;
+            if (matrix->start[i] == row_delimiter) tmp2++;
             i++;
         }
 
@@ -497,9 +480,9 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
                 if (a > b || b >= weights.start[line_index] || matrix->start[j+tmp] != pivot)
                 {
                     j += a;
-                    while (matrix->start[j] != limit)
+                    while (matrix->start[j] != row_delimiter)
                     {
-                        if (matrix->start[j] > pivot) matrix->start[j] -= 1;
+                        if (matrix->start[j] > pivot) matrix->start[j]--;
                         j++;
                     }
                 }
@@ -538,35 +521,16 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 
                     for (unsigned long z = 0 ; z < weights.start[line_index] ; z++)
                     {
-                        if (matrix->start[j+z] > pivot) matrix->start[j+z] -= 1;
+                        if (matrix->start[j+z] > pivot) matrix->start[j+z]--;
                     }
 
-                    for (size_t z = 0 ; z < sorted.len ; z++)
-                    {
-                        if (sorted.start[z] == line_index)
-                        {
-                            tmp3 = z;
-                            break;
-                        }
-                    }
+                    tmp3 = get_index(sorted, line_index);
 
-                    while (tmp3 > 0 && weights.start[sorted.start[tmp3]] < weights.start[sorted.start[tmp3-1]])
-                    {
-                        tmp4 = sorted.start[tmp3-1];
-                        sorted.start[tmp3-1] = sorted.start[tmp3];
-                        sorted.start[tmp3] = tmp4;
-                        tmp3--;
-                    }
+                    bubble_sort_down(weights, &sorted, tmp3); // update the sorted list of line weights
+                    tmp3 = 0;
+                    bubble_sort_up(weights, &sorted, tmp3); // update the sorted list of line weights
 
-                    while (tmp3 < sorted.len-1 && weights.start[sorted.start[tmp3]] > weights.start[sorted.start[tmp3+1]])
-                    {
-                        tmp4 = sorted.start[tmp3+1];
-                        sorted.start[tmp3+1] = sorted.start[tmp3];
-                        sorted.start[tmp3] = tmp4;
-                        tmp3++;
-                    }
-
-                    while (j < matrix->len && matrix->start[j] != limit) j++;
+                    while (j < matrix->len && matrix->start[j] != row_delimiter) j++;
                 }
                 j++;
                 line_index++;
@@ -577,7 +541,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
         tmp3 = 0;
         while (tmp3 != tmp2)
         {
-            if (matrix->start[i] == limit) tmp3++;
+            if (matrix->start[i] == row_delimiter) tmp3++;
             i++;
         }
 
