@@ -55,7 +55,7 @@ void reduce_relations(dyn_array* relations, dyn_array* smooth, dyn_array_classic
     mpz_clears(tmp_mpz, tmp_mpz2, NULL);
 }
 
-void bubble_sort_down(dyn_array_classic weights, dyn_array_classic *sorted, unsigned long tmp3)
+void bubble_sort_down(dyn_array_classic *sorted, dyn_array_classic weights, unsigned long tmp3)
 {
     unsigned long tmp4;
     while (tmp3 > 0 && weights.start[sorted->start[tmp3]] < weights.start[sorted->start[tmp3-1]])
@@ -67,7 +67,7 @@ void bubble_sort_down(dyn_array_classic weights, dyn_array_classic *sorted, unsi
     }
 }
 
-void bubble_sort_up(dyn_array_classic weights, dyn_array_classic *sorted, unsigned long tmp3)
+void bubble_sort_up(dyn_array_classic *sorted, dyn_array_classic weights, unsigned long tmp3)
 {
     unsigned long tmp4;
     while (tmp3 < sorted->len-1 && weights.start[sorted->start[tmp3]] > weights.start[sorted->start[tmp3+1]])
@@ -107,7 +107,17 @@ bool delete_empty_row(dyn_array_classic *matrix, dyn_array_classic *weights, dyn
     return true;
 }
 
-void delete_singleton(dyn_array *relations, dyn_array *smooth, dyn_array_classic *matrix, dyn_array_classic *weights, dyn_array_classic *rel_weight, dyn_array_classic sorted, size_t i, unsigned long row_index, unsigned long row_delimiter)
+void delete_singleton(
+    dyn_array *relations,
+    dyn_array *smooth,
+    dyn_array_classic *matrix,
+    dyn_array_classic *weights, 
+    dyn_array_classic *rel_weight,
+    dyn_array_classic sorted,
+    size_t i,
+    unsigned long row_index,
+    unsigned long row_delimiter
+)
 {
     unsigned long tmp = matrix->start[i-1];
     delete_classic(matrix, i);
@@ -133,7 +143,7 @@ void delete_singleton(dyn_array *relations, dyn_array *smooth, dyn_array_classic
 
             unsigned long tmp3 = get_index(sorted, tmp2);
 
-            bubble_sort_down(*weights, &sorted, tmp3); // update the sorted list of line weights
+            bubble_sort_down(&sorted,*weights, tmp3); // update the sorted list of line weights
         }
         else
         {
@@ -154,7 +164,18 @@ void delete_singleton(dyn_array *relations, dyn_array *smooth, dyn_array_classic
     }
 }
 
-void delete_to_elements_row(dyn_array *relations, dyn_array *smooth, dyn_array_classic *matrix, dyn_array_classic *rel_weight, dyn_array_classic sorted, dyn_array_classic *weights, mpz_t n, size_t i, unsigned long row_index, unsigned long row_delimiter)
+void delete_two_elements_row(
+    dyn_array *relations,
+    dyn_array *smooth,
+    dyn_array_classic *matrix,
+    dyn_array_classic *rel_weight,
+    dyn_array_classic *weights,
+    dyn_array_classic sorted,
+    mpz_t n,
+    size_t i,
+    unsigned long row_index,
+    unsigned long row_delimiter
+)
 {
     unsigned long pivot, remain, tmp2, tmp3;
     size_t j;
@@ -192,7 +213,7 @@ void delete_to_elements_row(dyn_array *relations, dyn_array *smooth, dyn_array_c
 
                 tmp3 = get_index(sorted, tmp2);
 
-                bubble_sort_up(*weights, &sorted, tmp3);
+                bubble_sort_up(&sorted, *weights, tmp3);
                 j++;
             }
             tmp2++;
@@ -207,7 +228,7 @@ void delete_to_elements_row(dyn_array *relations, dyn_array *smooth, dyn_array_c
 
             tmp3 = get_index(sorted, tmp2);
 
-            bubble_sort_down(*weights, &sorted, tmp3); // update the sorted list of line weights
+            bubble_sort_down(&sorted,*weights, tmp3); // update the sorted list of line weights
         }
 
         else if (matrix->start[j] == remain && has_pivot)
@@ -219,7 +240,7 @@ void delete_to_elements_row(dyn_array *relations, dyn_array *smooth, dyn_array_c
 
             tmp3 = get_index(sorted, tmp2);
 
-            bubble_sort_down(*weights, &sorted, tmp3);
+            bubble_sort_down(&sorted, *weights, tmp3);
         }
         else if (matrix->start[j] > remain && has_pivot)
         {
@@ -230,7 +251,7 @@ void delete_to_elements_row(dyn_array *relations, dyn_array *smooth, dyn_array_c
 
             tmp3 = get_index(sorted, tmp2);
 
-            bubble_sort_up(*weights, &sorted, tmp3); // update the sorted list of line weights
+            bubble_sort_up(&sorted, *weights, tmp3); // update the sorted list of line weights
             j++;
         }
         else
@@ -260,7 +281,15 @@ void delete_to_elements_row(dyn_array *relations, dyn_array *smooth, dyn_array_c
  *   - Maintains a sorted list of row weights.
  *   - Merges lightweight rows below 'merge_bound'.
  */
-void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* smooth, unsigned long row_delimiter, mpz_t n, dyn_array_classic* rel_weight, unsigned long merge_bound)
+void reduce_matrix(
+    dyn_array* relations,
+    dyn_array* smooth,
+    dyn_array_classic* matrix,
+    dyn_array_classic* rel_weight,
+    mpz_t n,
+    unsigned long row_delimiter,
+    unsigned long merge_bound
+)
 {
     dyn_array_classic weights;
     init_classic(&weights);
@@ -337,7 +366,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 
                 else if (line_len == 2) // fuse row with only two elements
                 {
-                    delete_to_elements_row(relations, smooth, matrix, rel_weight, sorted, &weights, n, i, row_index, row_delimiter);
+                    delete_two_elements_row(relations, smooth, matrix, rel_weight, &weights, sorted, n, i, row_index, row_delimiter);
 
                     line_len = 0;
                     i = 0;
@@ -411,7 +440,7 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 
                         tmp3 = get_index(sorted, tmp);
 
-                        bubble_sort_down(weights, &sorted, tmp3); // update the sorted list of line weights
+                        bubble_sort_down(&sorted, weights, tmp3); // update the sorted list of line weights
                     }
                     else
                     {
@@ -526,9 +555,9 @@ void reduce_matrix(dyn_array_classic* matrix, dyn_array* relations, dyn_array* s
 
                     tmp3 = get_index(sorted, line_index);
 
-                    bubble_sort_down(weights, &sorted, tmp3); // update the sorted list of line weights
+                    bubble_sort_down(&sorted, weights, tmp3); // update the sorted list of line weights
                     tmp3 = 0;
-                    bubble_sort_up(weights, &sorted, tmp3); // update the sorted list of line weights
+                    bubble_sort_up(&sorted, weights, tmp3); // update the sorted list of line weights
 
                     while (j < matrix->len && matrix->start[j] != row_delimiter) j++;
                 }

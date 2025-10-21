@@ -3,24 +3,26 @@
 
 #include "structures.h"
 
-void sieve(dyn_array_small* sieve,
-    const unsigned long length,
-    const unsigned long L,
-    const dyn_array_classic* primes,
-    const unsigned long * logs,
-    const dyn_array* roots,
-    const mpz_t n,
-    const mpz_t poly_a,
-    const mpz_t poly_b,
-    const mpz_t poly_c,
-    const dyn_array* inverse_a,
-    const dyn_array_classic* way_to_root,
-    const dyn_array_classic* locations,
-    signed long *tmp_array,
-    const unsigned long skipped,
-    const unsigned long prime_start,
-    dyn_array* smooth, 
-    const unsigned long smooth_bound)
+void sieve(
+    dyn_array* smooth,
+    dyn_array* roots,
+    dyn_array* inverse_a,
+    dyn_array_classic *primes,
+    dyn_array_classic *way_to_root,
+    dyn_array_classic *locations,
+    dyn_array_small *sieve,
+    mpz_t n,
+    mpz_t poly_a,
+    mpz_t poly_b,
+    mpz_t poly_c,
+    unsigned long *logs,
+    unsigned long length,
+    unsigned long L,
+    unsigned long skipped,
+    unsigned long prime_start,
+    unsigned long smooth_bound,
+    signed long *tmp_array
+)
 {
 
     mpz_t z, tmp, inv_2b_mod_n;

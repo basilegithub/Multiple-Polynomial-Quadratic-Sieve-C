@@ -4,7 +4,25 @@
 #include "structures.h"
 #include "utils.h"
 
-void create_polynomial(mpz_t a, dyn_array* sol_needed, dyn_array* second_part, dyn_array_classic* locations, mpz_t n, dyn_array_classic* primes, dyn_array* roots, unsigned long bounds[4], mpf_t target, mpf_t ln2, mpf_t ln10, dyn_array* inverse_a, dyn_array_classic* way_to_root, mpf_t best_bound, dyn_array_classic* tmp_where, mpf_t e, unsigned long mult)
+void create_polynomial(
+    dyn_array* sol_needed,
+    dyn_array* second_part,
+    dyn_array* roots,
+    dyn_array* inverse_a,
+    dyn_array_classic* locations,
+    dyn_array_classic* primes,
+    dyn_array_classic* way_to_root,
+    dyn_array_classic* tmp_where,
+    mpz_t a,
+    mpz_t n,
+    mpf_t target,
+    mpf_t ln2,
+    mpf_t ln10,
+    mpf_t best_bound,
+    mpf_t e,
+    unsigned long bounds[4],
+    unsigned long mult
+)
 {
     mpz_set_ui(a, 1);
     sol_needed->len = 0;
@@ -112,7 +130,7 @@ void create_polynomial(mpz_t a, dyn_array* sol_needed, dyn_array* second_part, d
     mpf_clears(bound, tmp_mpf, tmp_mpf2, NULL);
 }
 
-void CRT(mpz_t res, dyn_array* moduli, mpz_t a, dyn_array* second_part)
+void CRT(dyn_array* moduli, dyn_array* second_part, mpz_t a, mpz_t res)
 {
     mpz_t total;
     mpz_init_set_ui(total, 0);

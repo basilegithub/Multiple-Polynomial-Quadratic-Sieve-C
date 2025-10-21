@@ -15,8 +15,8 @@
 void mono_cpu_sieve(
     dyn_array* relations,
     dyn_array* smooth_numbers,
+    dyn_array roots,
     dyn_array_classic primes,
-    dyn_array a,
     mpz_t n,
     mpz_t prod_primes,
     mpz_t cst,
@@ -26,6 +26,11 @@ void mono_cpu_sieve(
     mpf_t ln2,
     mpf_t ln10,
     mpf_t e,
+    unsigned long* full_found,
+    unsigned long* partial_found,
+    unsigned long* indexp,
+    unsigned long* bounds,
+    unsigned long* logs,
     unsigned long best_mult,
     unsigned long time_seed,
     unsigned long sieve_len,
@@ -43,11 +48,6 @@ void mono_cpu_sieve(
     unsigned long time_diff,
     unsigned long objective,
     unsigned long seconds,
-    unsigned long* full_found,
-    unsigned long* partial_found,
-    unsigned long* indexp,
-    unsigned long* bounds,
-    unsigned long* logs,
     int* need_append,
     int flag_batch_smooth,
     double nb_large,
@@ -154,25 +154,25 @@ void mono_cpu_sieve(
         if (relations->len >= dim+20+addup)
             break;
 
-        if (mpz_sizeinbase(tmppolyindex,2)-1 == threshold)
+        if (mpz_sizeinbase(tmppolyindex, 2)-1 == threshold)
         {
             create_polynomial(
-                poly_a,
                 &solutions_needed,
                 &second_part,
+                &roots,
+                &inverse_a,
                 &locations,
-                n,
                 &primes,
-                &a,
-                bounds,
+                &way_to_root,
+                &tmp_where,
+                poly_a,
+                n,
                 target,
                 ln2,
                 ln10,
-                &inverse_a,
-                &way_to_root,
                 best_bound,
-                &tmp_where,
                 e,
+                bounds,
                 best_mult
             );
 
@@ -194,7 +194,8 @@ void mono_cpu_sieve(
             mpz_add_ui(tmppolyindex, tmppolyindex, 1);
         }
 
-        CRT(tmp_poly, &solutions_needed, poly_a, &second_part);
+        CRT(&solutions_needed, &second_part, poly_a, tmp_poly);
+
         mpz_div_2exp(tmp_poly2, poly_a, 1);
 
         if (mpz_cmp(tmp_poly, tmp_poly2) > 0) mpz_sub(tmp_poly, poly_a, tmp_poly);
@@ -205,24 +206,24 @@ void mono_cpu_sieve(
         mpz_set(poly_c, tmp_poly);
 
         sieve(
-            &sieve_array,
-            sieve_len,
-            half,
+            &sieved_candidates,
+            &roots,
+            &inverse_a,
             &primes,
-            logs,
-            &a,
+            &way_to_root,
+            &locations,
+            &sieve_array,
             n,
             poly_a,
             poly_b,
             poly_c,
-            &inverse_a,
-            &way_to_root,
-            &locations,
-            tmp_array_sieve,
+            logs,
+            sieve_len,
+            half,
             skipped,
             prime_start,
-            &sieved_candidates,
-            smooth_bound
+            smooth_bound,
+            tmp_array_sieve
         );
 
         for (size_t i = 0 ; i < sieved_candidates.len ; i++)
@@ -271,28 +272,28 @@ void mono_cpu_sieve(
                 for (size_t k = 0 ; k < batch_size ; k++)
                 {
                     handle_relations(
-                    relations,
-                    smooth_numbers,
-                    tmp_array,
-                    &partial_relations,
-                    &to_combine_node,
-                    &graph,
-                    &parent,
-                    &stack,
-                    block,
-                    coefficient,
-                    n,
-                    value,
-                    tmp_bin,
-                    k,
-                    tmp_a,
-                    tmp_b,
-                    tmplol,
-                    full_found,
-                    partial_found,
-                    indexp,
-                    need_append
-                );
+                        &partial_relations,
+                        &graph,
+                        &parent,
+                        tmp_array,
+                        &to_combine_node,
+                        &stack,
+                        relations,
+                        smooth_numbers,
+                        block,
+                        coefficient,
+                        n,
+                        value,
+                        tmp_bin,
+                        full_found,
+                        partial_found,
+                        indexp,
+                        k,
+                        tmp_a,
+                        tmp_b,
+                        tmplol,
+                        need_append
+                    );
                 }
 
                 reset(&block);

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-void gaussian_elimination(unsigned long relations_len, unsigned long base_size, mpz_t *dense_matrix, mpz_t *res)
+void gaussian_elimination(mpz_t *dense_matrix, mpz_t *res, unsigned long relations_len, unsigned long base_size)
 {
     mpz_t tmp;
     mpz_init(tmp);
@@ -57,7 +57,7 @@ void gaussian_elimination(unsigned long relations_len, unsigned long base_size, 
     mpz_clear(tmp);
 }
 
-bool row_is_zero(unsigned long relations_len, unsigned long base_size, mpz_t *dense_matrix, size_t row_index)
+bool row_is_zero(mpz_t *dense_matrix, size_t row_index, unsigned long relations_len, unsigned long base_size)
 {
     return ((bool) !mpz_cmp_ui(dense_matrix[row_index], 0));
 }

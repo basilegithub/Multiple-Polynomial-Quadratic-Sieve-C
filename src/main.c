@@ -150,24 +150,25 @@ void print_bits_and_digits(FILE *logfile, mpz_t n)
     log_msg(logfile, "%lu bits ; %lu digits", mpz_sizeinbase(n, 2), mpz_sizeinbase(n, 10));
 }
 
-void compute_factor_base(dyn_array_classic* primes, dyn_array* a, dyn_array_classic B, mpz_t* prod_primes, mpz_t n, mpz_t tmp2, gmp_randstate_t state)
+void compute_factor_base(dyn_array_classic* primes, dyn_array* roots, dyn_array_classic B, mpz_t* prod_primes, mpz_t n, mpz_t tmp2, gmp_randstate_t state)
 {
     mpz_init_set_ui(*prod_primes, 2);
+
     for (size_t i = 1 ; i < B.len ; i++)
     {
-        if (my_legendre(n,B.start[i]) == 1)
+        if (my_legendre(n, B.start[i]) == 1)
         {
             append_classic(primes, B.start[i]);
             mpz_set(tmp2, n);
             sqrt_mod(tmp2, B.start[i], state);
-            append(a, tmp2);
+            append(roots, tmp2);
             mpz_mul_ui(*prod_primes, *prod_primes, B.start[i]);
         }
         else if (!my_legendre(n, B.start[i]))
         {
             append_classic(primes, B.start[i]);
             mpz_set_ui(tmp2, 0);
-            append(a, tmp2);
+            append(roots, tmp2);
             mpz_mul_ui(*prod_primes, *prod_primes, B.start[i]);
         }
     }
@@ -338,7 +339,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
             mpz_set_ui(x,1);
             mpz_set_ui(y,1);
 
-            build_sqrt(N, relations.len, tmp_array, primes, x, y, relations, smooth_numbers);
+            build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, tmp_array);
 
             mpz_sub(tmp, x, y);
             mpz_add(tmp2, x, y);
@@ -433,7 +434,7 @@ int main()
     dyn_array_classic tmp_primes;
     init_classic(&tmp_primes);
 
-    smoothB(b, &tmp_primes);
+    erasthotenes_sieve(&tmp_primes, b);
 
     mpf_t best_time, work, time2, time1;
     mpf_init_set_si(best_time, -1);
@@ -468,20 +469,20 @@ int main()
 
     dyn_array_classic B;
     init_classic(&B);
-    smoothB(b,&B);
+    erasthotenes_sieve(&B, b);
 
     dyn_array_classic primes;
     init_classic(&primes);
-    append_classic(&primes,2);
+    append_classic(&primes, 2);
 
     mpz_mod_ui(tmp2, n, 2);
-    dyn_array a;
-    init(&a);
-    append(&a,tmp2);
+    dyn_array roots;
+    init(&roots);
+    append(&roots, tmp2);
 
     mpz_t prod_primes;
 
-    compute_factor_base(&primes, &a, B, &prod_primes, n, tmp2, state);
+    compute_factor_base(&primes, &roots, B, &prod_primes, n, tmp2, state);
 
     struct tm tm = *localtime(&(time_t){time(NULL)});
     log_msg(logfile, "Factor base created : %lu primes", primes.len);
@@ -603,8 +604,8 @@ int main()
                         logfile,
                         &relations,
                         &smooth_numbers,
+                        roots,
                         primes,
-                        a,
                         n,
                         prod_primes,
                         cst,
@@ -614,6 +615,11 @@ int main()
                         ln2,
                         ln10,
                         e,
+                        &full_found,
+                        &partial_found,
+                        &indexp,
+                        bounds,
+                        logs,
                         best_mult,
                         time_seed,
                         sieve_len,
@@ -631,11 +637,6 @@ int main()
                         time_diff,
                         objective,
                         seconds,
-                        &full_found,
-                        &partial_found,
-                        &indexp,
-                        bounds,
-                        logs,
                         &need_append,
                         nb_cpu_sieve,
                         flag_batch_smooth,
@@ -651,8 +652,8 @@ int main()
             mono_cpu_sieve(
                         &relations,
                         &smooth_numbers,
+                        roots,
                         primes,
-                        a,
                         n,
                         prod_primes,
                         cst,
@@ -662,6 +663,11 @@ int main()
                         ln2,
                         ln10,
                         e,
+                        &full_found,
+                        &partial_found,
+                        &indexp,
+                        bounds,
+                        logs,
                         best_mult,
                         time_seed,
                         sieve_len,
@@ -679,11 +685,6 @@ int main()
                         time_diff,
                         objective,
                         seconds,
-                        &full_found,
-                        &partial_found,
-                        &indexp,
-                        bounds,
-                        logs,
                         &need_append,
                         flag_batch_smooth,
                         mpf_get_d(nb_large),
@@ -745,22 +746,22 @@ int main()
 
         bool tmp_vec[relations_len];
 
-        build_dense_matrix(relations, primes, relations.len, primes.len+1, dense_matrix);
+        build_dense_matrix(relations, primes, dense_matrix, relations.len, primes.len+1);
 
         log_msg(logfile, "matrix built %lux%lu ; performing gaussian elimination...", relations.len, primes.len+1);
 
-        gaussian_elimination(relations.len, primes.len+1, dense_matrix, res);
+        gaussian_elimination(dense_matrix, res, relations.len, primes.len+1);
 
         for (unsigned long i = 0 ; i < relations.len ; i++)
         {
-            if (row_is_zero(relations.len, primes.len+1, dense_matrix, i))
+            if (row_is_zero(dense_matrix, i, relations.len, primes.len+1))
             {
                 mpz_set_ui(x, 1);
                 mpz_set_ui(y, 1);
 
                 convert_to_vec(res[i], relations_len, tmp_vec);
 
-                build_sqrt(N, relations.len, tmp_vec, primes, x, y, relations, smooth_numbers);
+                build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, tmp_vec);
 
                 mpz_sub(tmp, x, y);
                 mpz_add(tmp2, x, y);
@@ -799,7 +800,7 @@ int main()
         double density;
         unsigned long nb_lines;
 
-        build_sparse_matrix(&bin_matrix, relations, primes, &nonzero, &density, &nb_lines, &rel_weight);
+        build_sparse_matrix(relations, &bin_matrix, &rel_weight, primes, &nb_lines, &nonzero, &density);
 
         unsigned long len = relations.len;
 
@@ -808,7 +809,7 @@ int main()
 
         unsigned long merge_bound = 5;
 
-        reduce_matrix(&bin_matrix, &relations, &smooth_numbers, len, N, &rel_weight, merge_bound);
+        reduce_matrix(&relations, &smooth_numbers, &bin_matrix, &rel_weight, N, len, merge_bound);
 
         count(logfile, bin_matrix, len, relations.len);
 

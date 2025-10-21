@@ -4,7 +4,7 @@
 #include "structures.h"
 #include "generate_primes.h"
 
-void smoothB(mpz_t bound, dyn_array_classic* primes)
+void erasthotenes_sieve(dyn_array_classic* primes, mpz_t bound)
 {
     mpz_t sqrtB;
     mpz_init(sqrtB);
