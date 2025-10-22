@@ -1,60 +1,57 @@
 #include <gmp.h>
+#include <stdlib.h>
 
 #include "structures.h"
 #include "generate_primes.h"
 
-void smoothB(mpz_t B, dyn_array_classic* primes)
+void erasthotenes_sieve(dyn_array_classic* primes, mpz_t bound)
 {
-    mpz_t m;
-    mpz_init(m);
-    unsigned long i = 0;
+    mpz_t sqrtB;
+    mpz_init(sqrtB);
 
-    mpz_sqrt(m,B);
-    mpz_add_ui(m,m,1);
-    dyn_array_classic array;
-    init_len_classic(&array,mpz_get_ui(B));
-    while (mpz_cmp_ui(B,i) >= 0)
+    mpz_sqrt(sqrtB, bound);
+    mpz_add_ui(sqrtB, sqrtB, 1);
+
+    unsigned long bound_ui = mpz_get_ui(bound);
+    unsigned long sqrtB_ui = mpz_get_ui(sqrtB);
+
+    bool *array = calloc(bound_ui, sizeof(bool));
+
+    for (size_t i = 0 ; i < bound_ui ; i += 2) array[i] = true;
+
+    for (size_t i = 1 ; i < bound_ui ; i += 2) array[i] = false;
+
+    append_classic(primes, 2);
+
+    unsigned long index = 3;
+    unsigned long tmp = 2, square_index, i;
+
+    while (index < sqrtB_ui)
     {
-        *(array.start+i) = 1;
-        i++;
-    }
-    i = 1;
-    while (mpz_cmp_ui(B,i) >= 0)
-    {
-        *(array.start+i) = 0;
-        i += 2;
-    }
-    unsigned long index = 2;
-    append_classic(primes,index);
-    index = 3;
-    unsigned long tmp = 2,square_index;
-    while (index < mpz_get_ui(m))
-    {
-        if (*(array.start+tmp) == 1)
+        if (array[tmp])
         {
             square_index = index*index;
-            append_classic(primes,index);
+            append_classic(primes, index);
             i = square_index;
-            tmp = i-1;
-            while(mpz_cmp_ui(B,i) >= 0)
+            while(i <= bound_ui)
             {
-                *(array.start+tmp) = 0;
+                array[i-1] = false;
                 i += index;
-                tmp = i-1;
             }
         }
         index += 2;
         tmp = index-1;
     }
-    i = mpz_get_ui(m);
-    while (mpz_cmp_ui(B,i) >= 0)
+
+    i = sqrtB_ui;
+    while (i <= bound_ui)
     {
-        tmp = i-1;
-        if (*(array.start+tmp) == 1)
+        if (array[i-1] == 1)
         {
-            append_classic(primes,i);
+            append_classic(primes, i);
         }
         i++;
     }
-    mpz_clear(m);
+    mpz_clear(sqrtB);
+    free(array);
 }

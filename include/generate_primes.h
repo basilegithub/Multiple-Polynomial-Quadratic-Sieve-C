@@ -5,6 +5,6 @@
 
 #include "structures.h"
 
-void smoothB(mpz_t B, dyn_array_classic* primes);
+void erasthotenes_sieve(dyn_array_classic* primes, mpz_t bound);
 
 #endif // GENERATE_PRIMES_H

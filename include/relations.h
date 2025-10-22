@@ -5,31 +5,52 @@
 
 #include "structures.h"
 
-bool DFS(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_array_stack *stack);
-void find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_array_stack *stack);
-void combine_path(Hashmap_PartialRelation *partial_relations, dyn_array path, mpz_t x, mpz_t n, mpz_t res_x, mpz_t res_y, PartialRelation *to_combine_node);
+bool DFS(
+    Hashmap_graph graph,
+    dyn_array_stack *stack,
+    dyn_array *path,
+    mpz_t small_p,
+    mpz_t big_p
+);
 
-void handle_relations(
-    dyn_array* relations,
-    dyn_array* smooth_numbers,
-    PartialRelation *tmp_array,
+void find_path(
+    Hashmap_graph graph,
+    dyn_array_stack *stack,
+    dyn_array *path,
+    mpz_t small_p, mpz_t big_p
+);
+
+void combine_path(
     Hashmap_PartialRelation *partial_relations,
     PartialRelation *to_combine_node,
+    dyn_array path,
+    mpz_t x,
+    mpz_t n,
+    mpz_t res_x,
+    mpz_t res_y
+);
+
+void handle_relations(
+    Hashmap_PartialRelation *partial_relations,
     Hashmap_graph *graph,
     Hashmap_1D *parent,
+    PartialRelation *tmp_array,
+    PartialRelation *to_combine_node,
     dyn_array_stack *stack,
+    dyn_array* relations,
+    dyn_array* smooth_numbers,
     dyn_array block,
     dyn_array coefficient,
     mpz_t n,
     mpz_t value,
     mpz_t tmp_bin,
+    unsigned long* full_found,
+    unsigned long* partial_found,
+    unsigned long* indexp,
     unsigned long k,
     unsigned long tmp_a,
     unsigned long tmp_b,
     unsigned long tmplol,
-    unsigned long* full_found,
-    unsigned long* partial_found,
-    unsigned long* indexp,
     int* need_append
 );
 

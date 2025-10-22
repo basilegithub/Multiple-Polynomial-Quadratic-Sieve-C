@@ -85,6 +85,4 @@ Here are the next steps:
 
 - I still have to implement one last feature : adding block Lanczos algorithm for the linear algebra.
 
-- I have to continue cleaning up the code.
-
 - Finally, implement the GNFS algorithm in C.

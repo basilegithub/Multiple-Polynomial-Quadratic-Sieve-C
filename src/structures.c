@@ -85,43 +85,26 @@ void append_eco(dyn_array* array, mpz_t element)
 
     if (array->len == array->initialized)
     {
-        mpz_init_set(*(array->start+array->len), element);
+        mpz_init_set(array->start[array->len], element);
         array->initialized++;
     }
     else
     {
-        mpz_set(*(array->start+array->len), element);
+        mpz_set(array->start[array->len], element);
     }
     array->len++;
 }
 
 void append_only(dyn_array* array, mpz_t element)
 {
-    mpz_set(*(array->start+array->len), element);
+    mpz_set(array->start[array->len], element);
     array->len++;
 }
 
 void append_only_si(dyn_array* array, signed long element)
 {
-    mpz_set_si(*(array->start+array->len), element);
+    mpz_set_si(array->start[array->len], element);
     array->len++;
-}
-
-void append_block(dyn_array* array, unsigned long block_len, mpz_t tmp_vec[block_len])
-{
-    if (array->size <= array->len + block_len)
-    {
-        while (array->size <= array->len + block_len)
-        {
-            array->size <<= 1;
-        }
-        array->start = realloc(array->start, sizeof(mpz_t)*array->size);
-    }
-    for (unsigned long i = 0 ; i < block_len ; i++)
-    {
-        mpz_init_set(*(array->start+array->len+i), tmp_vec[i]);
-    }
-    array->len += block_len;
 }
 
 void append_classic(dyn_array_classic* array, unsigned long element)
@@ -131,70 +114,36 @@ void append_classic(dyn_array_classic* array, unsigned long element)
         array->size <<= 1;
         array->start = realloc(array->start, sizeof(unsigned long)*(array->size));
     }
-    *(array->start+array->len) = element;
+    array->start[array->len] = element;
     array->len++;
-}
-
-void append_block_classic(dyn_array_classic* array, unsigned long block_len, unsigned long tmp_vec[block_len])
-{
-    if (array->size <= array->len+block_len)
-    {
-        while (array->size <= array->len+block_len)
-        {
-            array->size <<= 1;
-        }
-        array->start = realloc(array->start, sizeof(unsigned long)*array->size);
-    }
-    for (unsigned long i = 0 ; i < block_len ; i++)
-    {
-        *(array->start+array->len+i) = tmp_vec[i];
-    }
-    array->len += block_len;
 }
 
 void delete_classic(dyn_array_classic* array, unsigned long index)
 {
-    for (unsigned long i = index ; i < array->len-1 ; i++) *(array->start+i) = *(array->start+i+1);
+    for (unsigned long i = index ; i < array->len-1 ; i++) array->start[i] = array->start[i+1];
     array->len--;
 }
 
 void delete_dyn(dyn_array* array, unsigned long index)
 {
-    for (unsigned long i = index ; i < array->len-1 ; i++) mpz_set(*(array->start+i), *(array->start+i+1));
+    for (unsigned long i = index ; i < array->len-1 ; i++) mpz_set(array->start[i], array->start[i+1]);
     array->len--;
-    mpz_clear(*(array->start + array->len));
+    mpz_clear(array->start[array->len]);
     array->initialized--;
 }
 
 void delete_dyn_eco(dyn_array* array, unsigned long index)
 {
-    for (unsigned long i = index ; i < array->len-1 ; i++) mpz_set(*(array->start+i), *(array->start+i+1));
+    for (unsigned long i = index ; i < array->len-1 ; i++) mpz_set(array->start[i], array->start[i+1]);
     array->len--;
 }
 
 void delete_dyn_unsorted(dyn_array* array, unsigned long index)
 {
     array->len--;
-    mpz_set(*(array->start+index), *(array->start+array->len));
-    mpz_clear(*(array->start + array->len));
+    mpz_set(array->start[index], array->start[array->len]);
+    mpz_clear(array->start[array->len]);
     array->initialized--;
-}
-
-void insert(dyn_array* array, mpz_t element, unsigned long index)
-{
-    if (array->size <= array->len)
-    {
-        array->size <<= 1;
-        array->start = realloc(array->start, sizeof(mpz_t)*(array->size));
-    }
-    mpz_init(*(array->start + array->len));
-    for (unsigned long i = array->len ; i > index ; i--)
-    {
-        mpz_set(*(array->start+i), *(array->start+i-1));
-    }
-    mpz_set(*(array->start+index), element);
-    array->len++;
-    array->initialized++;
 }
 
 void insert_classic(dyn_array_classic* array, unsigned long element, unsigned long index)
@@ -204,38 +153,12 @@ void insert_classic(dyn_array_classic* array, unsigned long element, unsigned lo
         array->size <<= 1;
         array->start = realloc(array->start, sizeof(unsigned long)*(array->size));
     }
-    for (unsigned long i = array->len ; i > index ; i--)
+    for (size_t i = array->len ; i > index ; i--)
     {
-        *(array->start + i) = *(array->start+i-1);
+        array->start[i] = array->start[i-1];
     }
-    *(array->start + index) = element;
+    array->start[index] = element;
     array->len++;
-}
-
-void insert_block(dyn_array* array, unsigned long index, unsigned long block_len, mpz_t element[block_len])
-{
-    if (array->size <= array->len + block_len)
-    {
-        while (array->size <= array->len + block_len)
-        {
-            array->size <<= 1;
-        }
-        array->start = realloc(array->start, sizeof(mpz_t)*array->size);
-    }
-    for (unsigned long i = array->len+block_len-1 ; i >= array->len ; i--)
-    {
-        mpz_init_set(*(array->start + i), *(array->start+i-block_len));
-    }
-    for (unsigned long i = array->len-1 ; i >= index + block_len ; i--)
-    {
-        mpz_set(*(array->start+i), *(array->start+i-block_len));
-    }
-    for (unsigned long i = 0 ; i < block_len ; i++)
-    {
-        mpz_set(*(array->start+index+i), element[i]);
-    }
-    array->len += block_len;
-    array->initialized++;
 }
 
 void reset(dyn_array* array)
@@ -247,7 +170,7 @@ void free_dyn_array(dyn_array* array) {
     if (!array || !array->start) return;  // safety check
 
     // Clear each GMP integer
-    for (unsigned long i = 0; i < array->initialized; i++) {
+    for (size_t i = 0; i < array->initialized; i++) {
         mpz_clear(array->start[i]);
     }
 
@@ -259,48 +182,6 @@ void free_dyn_array(dyn_array* array) {
     array->len = 0;
     array->size = 0;
     array->initialized = 0;
-}
-
-int is_present(dyn_array* array, mpz_t element)
-{
-    if (array->len == 0) return 0;
-    unsigned long a = 0;
-    unsigned long b = array->len-1;
-    unsigned long tmp = (a+b)/2;
-    while (mpz_cmp(*(array->start + tmp), element) != 0 && a <= b)
-    {
-        if (mpz_cmp(*(array->start + tmp), element) < 0) a = tmp + 1;
-        else
-        {
-            if (tmp == 0) return 0;
-            b = tmp - 1;
-        }
-        tmp = (a+b)/2;
-    }
-    if (mpz_cmp(*(array->start + tmp), element) == 0) return 1;
-    return 0;
-}
-
-int is_present_ui(dyn_array* array, unsigned long param)
-{
-    mpz_t element;
-    mpz_init_set_ui(element, param);
-    if (array->len == 0) return 0;
-    unsigned long a = 0;
-    unsigned long b = array->len-1;
-    unsigned long tmp = (a+b)/2;
-    while (mpz_cmp(*(array->start + tmp), element) != 0 && a <= b)
-    {
-        if (mpz_cmp(*(array->start + tmp), element) < 0) a = tmp + 1;
-        else
-        {
-            if (tmp == 0) return 0;
-            b = tmp - 1;
-        }
-        tmp = (a+b)/2;
-    }
-    if (mpz_cmp(*(array->start + tmp), element) == 0) return 1;
-    return 0;
 }
 
 // 1D Hashmap functions
@@ -436,21 +317,6 @@ bool hashmap_graph_is_present(Hashmap_graph *hashmap, const mpz_t key)
     return false; // not found
 }
 
-void hashmap_graph_get(Hashmap_graph *hashmap, const mpz_t key, dyn_array *output)
-{
-    size_t index = hash_graph_mpz_strong(hashmap, key);
-    HashNodeGraph *node = hashmap->table[index];
-
-    while (node) {
-        if (mpz_cmp(node->key, key) == 0) {
-            output = &node->value;
-            return;
-        }
-        node = node->next;
-    }
-    return;  // not found
-}
-
 dyn_array* hashmap_graph_get_ptr(Hashmap_graph *hashmap, const mpz_t key)
 {
     size_t index = hash_graph_mpz_strong(hashmap, key);
@@ -513,43 +379,6 @@ size_t hash_2d_mpz_strong(const Hashmap_PartialRelation *partial_relations, cons
     return (size_t) mpz_fdiv_ui(key, partial_relations->buckets);
 }
 
-void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, const PartialRelation value)
-{
-    mpz_t key;
-    mpz_init(key);
-    hashmap_2d_compute_key(small_p, big_p, key);
-    size_t index = hash_2d_mpz_strong(partial_relations, key);
-
-    HashNodePartialRelation *node = partial_relations->table[index];
-
-    while (node) {
-        if (mpz_cmp(node->key, key) == 0) {
-            mpz_set(node->value->x, value.x); // update existing
-            mpz_set(node->value->y, value.y); // update existing
-            mpz_set(node->value->small_p, value.small_p); // update existing
-            mpz_set(node->value->big_p, value.big_p); // update existing
-            mpz_clear(key);
-            return;
-        }
-        node = node->next;
-    }
-
-    // not found → insert
-    node = malloc(sizeof(HashNodePartialRelation));
-    node->value = malloc(sizeof(PartialRelation));
-    mpz_init_set(node->key, key);
-
-    mpz_init_set(node->value->x, value.x);
-    mpz_init_set(node->value->y, value.y);
-    mpz_init_set(node->value->small_p, value.small_p);
-    mpz_init_set(node->value->big_p, value.big_p);
-
-    node->next = partial_relations->table[index];
-    partial_relations->table[index] = node;
-
-    mpz_clear(key);
-}
-
 void hashmap_2d_put_node(Hashmap_PartialRelation *partial_relations, PartialRelation new_node)
 {
     mpz_t key;
@@ -609,28 +438,6 @@ bool hashmap_2d_get_from_mpz(Hashmap_PartialRelation *partial_relations, const m
     }
 
     mpz_clear(key);
-    return false; // not found
-}
-
-bool hashmap_2d_is_present_mpz(Hashmap_PartialRelation *partial_relations, const mpz_t small_p, const mpz_t big_p)
-{
-     mpz_t key;
-    mpz_init(key);
-    hashmap_2d_compute_key_from_mpz(small_p, big_p, key);
-    size_t index = hash_2d_mpz_strong(partial_relations, key);
-    
-    HashNodePartialRelation *node = partial_relations->table[index];
-
-    while (node) {
-        if (mpz_cmp(node->key, key) == 0) {
-            mpz_clear(key);
-            return true;  // found
-        }
-        node = node->next;
-    }
-
-    mpz_clear(key);
-
     return false; // not found
 }
 

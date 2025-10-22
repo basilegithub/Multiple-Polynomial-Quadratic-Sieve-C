@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
+#include <math.h>
 
 #include "structures.h"
 #include "utils.h"
@@ -13,22 +15,22 @@
 void mono_cpu_sieve(
     dyn_array* relations,
     dyn_array* smooth_numbers,
+    dyn_array roots,
     dyn_array_classic primes,
-    dyn_array a,
     mpz_t n,
     mpz_t prod_primes,
     mpz_t cst,
     mpz_t cst2,
     mpz_t tmp_bin,
-    mpf_t nb_large,
     mpf_t target,
     mpf_t ln2,
     mpf_t ln10,
     mpf_t e,
-    mpf_t var1,
-    mpf_t var2,
-    mpf_t var3,
-    mpf_t tmpf2,
+    unsigned long* full_found,
+    unsigned long* partial_found,
+    unsigned long* indexp,
+    unsigned long* bounds,
+    unsigned long* logs,
     unsigned long best_mult,
     unsigned long time_seed,
     unsigned long sieve_len,
@@ -46,52 +48,42 @@ void mono_cpu_sieve(
     unsigned long time_diff,
     unsigned long objective,
     unsigned long seconds,
-    unsigned long* full_found,
-    unsigned long* partial_found,
-    unsigned long* indexp,
-    unsigned long* bounds,
-    unsigned long* logs,
     int* need_append,
     int flag_batch_smooth,
+    double nb_large,
     time_t second1,
     time_t second2
 )
 {
     printf("Sieving with 1 cpu...\n");
 
-    mpz_t poly_a, poly_b, poly_c;
-    mpz_init(poly_a);
-    mpz_init(poly_b);
-    mpz_init(poly_c);
-    mpz_t tmp;
-    mpz_init(tmp);
+    mpz_t poly_a, poly_b, poly_c, tmp, value, poly_index, tmppolyindex;
+    mpz_inits(poly_a, poly_b, poly_c, tmp, value, NULL);
 
     dyn_array_small sieve_array;
     init_len_small(&sieve_array, sieve_len);
-    for (unsigned long i = 0 ; i < sieve_array.len ; i++) *(sieve_array.start+i) = 0;
+    memset(sieve_array.start, 0, sieve_len*sizeof(unsigned short));
 
     printf("sieve array size is %lu Bytes with %lu elements\n\n", sieve_array.len*sizeof(unsigned short int), sieve_array.len);
 
-    dyn_array solutions_needed, second_part, inverse_a;
     dyn_array_classic locations, tmp_where, way_to_root;
     init_classic(&locations);
     init_classic(&tmp_where);
     init_classic(&way_to_root);
-    init2_len(&solutions_needed,mpf_get_ui(target));
-    init2_len(&second_part,mpf_get_ui(target));
-    init2_len(&inverse_a,primes.len);
+
+    dyn_array solutions_needed, second_part, inverse_a;
+    init2_len(&solutions_needed, mpf_get_ui(target));
+    init2_len(&second_part, mpf_get_ui(target));
+    init2_len(&inverse_a, primes.len);
 
     mpf_t best_bound;
     mpf_init(best_bound);
-    mpz_t value;
-    mpz_init(value);
 
-    mpz_t poly_index, tmppolyindex;
-    mpz_init_set_ui(poly_index,0);
-    mpz_init_set_ui(tmppolyindex,1);
+    mpz_init_set_ui(poly_index, 0);
+    mpz_init_set_ui(tmppolyindex, 1);
 
     dyn_array coefficient;
-    init2_len(&coefficient,2*batch_size);
+    init2_len(&coefficient, 2*batch_size);
     reset(&coefficient);
 
     unsigned long threshold = 0;
@@ -103,10 +95,13 @@ void mono_cpu_sieve(
     PartialRelation *tmp_array = calloc(batch_size, sizeof(PartialRelation));
     for (size_t i = 0 ; i < batch_size ; i++)
     {
-        mpz_init(tmp_array[i].x);
-        mpz_init(tmp_array[i].y);
-        mpz_init(tmp_array[i].small_p);
-        mpz_init(tmp_array[i].big_p);
+        mpz_inits(
+            tmp_array[i].x,
+            tmp_array[i].y,
+            tmp_array[i].small_p,
+            tmp_array[i].big_p,
+            NULL
+        );
     }
 
     PartialRelation to_combine_node;
@@ -122,179 +117,261 @@ void mono_cpu_sieve(
     hashmap_1d_create(&parent, 16*4096);
 
     dyn_array to_batch;
-    init2_len(&to_batch,batch_size);
+    init2_len(&to_batch, batch_size);
     reset(&to_batch);
 
     dyn_array batch_array;
-    init2_len(&batch_array,2*batch_size-1);
+    init2_len(&batch_array, 2*batch_size-1);
+
     dyn_array block;
-    init2_len(&block,batch_size);
+    init2_len(&block, batch_size);
     reset(&block);
-    double rate1, rate2;
+
+    double full_rate, partial_rate;
+
     mpf_t tmpf;
     mpf_init(tmpf);
-    dyn_array tmp_block;
-    init2_len(&tmp_block,half);
-    reset(&tmp_block);
-    mpz_t tmp_poly,tmp_poly2;
-    mpz_init(tmp_poly);
-    mpz_init(tmp_poly2);
+
+    dyn_array sieved_candidates;
+    init2_len(&sieved_candidates, half);
+    reset(&sieved_candidates);
+
+    mpz_t tmp_poly, tmp_poly2;
+    mpz_inits(tmp_poly, tmp_poly2, NULL);
 
     gmp_randstate_t state;
     gmp_randinit_default(state);
     gmp_randseed_ui(state, (unsigned long)time(NULL));
 
+    mpz_t prod_primes_p1;
+    mpz_init(prod_primes_p1);
+    mpz_add_ui(prod_primes_p1, prod_primes_p1, 1);
+
+    signed long *tmp_array_sieve = calloc(sieve_len, sizeof (signed long));
+
     while(1)
     {
-        if (relations->len >= dim+20+addup) break;
+        if (relations->len >= dim+20+addup)
+            break;
 
-        if (mpz_sizeinbase(tmppolyindex,2)-1 == threshold)
+        if (mpz_sizeinbase(tmppolyindex, 2)-1 == threshold)
         {
-            create_polynomial(poly_a,&solutions_needed,&second_part,&locations,n,&primes,&a,bounds,target,ln2,ln10,&inverse_a,&way_to_root,best_bound,&tmp_where,e,best_mult);
-            mpz_set_ui(poly_index,0);
-            mpz_set_ui(tmppolyindex,1);
+            create_polynomial(
+                &solutions_needed,
+                &second_part,
+                &roots,
+                &inverse_a,
+                &locations,
+                &primes,
+                &way_to_root,
+                &tmp_where,
+                poly_a,
+                n,
+                target,
+                ln2,
+                ln10,
+                best_bound,
+                e,
+                bounds,
+                best_mult
+            );
+
+            mpz_set_ui(poly_index, 0);
+            mpz_set_ui(tmppolyindex, 1);
             threshold = locations.len-1;
-        } else
+        }
+        else
         {
-            mpz_xor(tmp_poly,poly_index,tmppolyindex);
+            mpz_xor(tmp_poly, poly_index, tmppolyindex);
             ind = 0;
-            while (mpz_cmp_ui(tmp_poly,0) > 0)
+            while (mpz_cmp_ui(tmp_poly, 0) > 0)
             {
-                mpz_neg(*(solutions_needed.start+solutions_needed.len-1-ind),*(solutions_needed.start+solutions_needed.len-1-ind));
+                mpz_neg(solutions_needed.start[solutions_needed.len-1-ind], solutions_needed.start[solutions_needed.len-1-ind]);
                 mpz_div_2exp(tmp_poly, tmp_poly, 1);
                 ind++;
             }
-            mpz_add_ui(poly_index,poly_index,1);
-            mpz_add_ui(tmppolyindex,tmppolyindex,1);
+            mpz_add_ui(poly_index, poly_index, 1);
+            mpz_add_ui(tmppolyindex, tmppolyindex, 1);
         }
-        CRT(tmp_poly,&solutions_needed,poly_a,&second_part);
-        mpz_div_2exp(tmp_poly2, poly_a, 1);
-        if (mpz_cmp(tmp_poly,tmp_poly2) > 0) mpz_sub(tmp_poly,poly_a,tmp_poly);
-        mpz_set(poly_b,tmp_poly);
-        mpz_mul(tmp_poly,tmp_poly,tmp_poly);
-        mpz_sub(tmp_poly,tmp_poly,n);
-        mpz_divexact(tmp_poly,tmp_poly,poly_a);
-        mpz_set(poly_c,tmp_poly);
-        sieve(&sieve_array,sieve_len,half,&primes,logs,&a,n,poly_a,poly_b,poly_c,&inverse_a,&way_to_root,&locations,skipped,prime_start,&tmp_block,smooth_bound);
-        for (unsigned long i = 0 ; i < tmp_block.len ; i++)
-        {
-            mpz_set(value,*(tmp_block.start+i));
-            append_only(&block,value);
-            mpz_mul(value,value,poly_a);
-            mpz_add(value,value,poly_b);
-            mpz_add(tmp,value,poly_b);
-            mpz_mul(tmp,tmp,*(tmp_block.start+i));
-            mpz_add(tmp,tmp,poly_c);
 
-            mpz_abs(tmp,tmp);
-            append_only(&to_batch,tmp);
-            append_only(&coefficient,poly_a);
-            append_only(&coefficient,poly_b);
+        CRT(&solutions_needed, &second_part, poly_a, tmp_poly);
+
+        mpz_div_2exp(tmp_poly2, poly_a, 1);
+
+        if (mpz_cmp(tmp_poly, tmp_poly2) > 0) mpz_sub(tmp_poly, poly_a, tmp_poly);
+        mpz_set(poly_b, tmp_poly);
+        mpz_mul(tmp_poly, tmp_poly, tmp_poly);
+        mpz_sub(tmp_poly, tmp_poly, n);
+        mpz_divexact(tmp_poly, tmp_poly, poly_a);
+        mpz_set(poly_c, tmp_poly);
+
+        sieve(
+            &sieved_candidates,
+            &roots,
+            &inverse_a,
+            &primes,
+            &way_to_root,
+            &locations,
+            &sieve_array,
+            n,
+            poly_a,
+            poly_b,
+            poly_c,
+            logs,
+            sieve_len,
+            half,
+            skipped,
+            prime_start,
+            smooth_bound,
+            tmp_array_sieve
+        );
+
+        for (size_t i = 0 ; i < sieved_candidates.len ; i++)
+        {
+            mpz_set(value, sieved_candidates.start[i]);
+            append_only(&block, value);
+            mpz_mul(value, value, poly_a);
+            mpz_add(value, value, poly_b);
+            mpz_add(tmp, value, poly_b); // tmp = ax + 2b
+
+            mpz_mul(tmp, tmp, sieved_candidates.start[i]);
+            mpz_add(tmp, tmp, poly_c); // tmp = ax² + 2bx + c = (ax + 2b)x + c
+
+            mpz_abs(tmp, tmp);
+            append_only(&to_batch, tmp);
+            append_only(&coefficient, poly_a);
+            append_only(&coefficient, poly_b);
+
             if (to_batch.len == batch_size)
             {
                 if (flag_batch_smooth)
                 {
-                    batch_smooth(&to_batch,&batch_array,tmp_array,prod_primes,cst,cst2,prime,state);
+                    batch_smooth(
+                        tmp_array,
+                        &to_batch,
+                        &batch_array,
+                        prod_primes,
+                        prod_primes_p1,
+                        cst,
+                        cst2,
+                        prime,state
+                    );
                 }
                 else
                 {
-                    naive_smooth(&to_batch, tmp_array, primes, cst, cst2, state);
+                    naive_smooth(
+                        tmp_array,
+                        &to_batch,
+                        primes,
+                        cst,
+                        cst2,
+                        state
+                    );
                 }
 
-                for (unsigned long k = 0 ; k < batch_size ; k++)
+                for (size_t k = 0 ; k < batch_size ; k++)
                 {
                     handle_relations(
-                    relations,
-                    smooth_numbers,
-                    tmp_array,
-                    &partial_relations,
-                    &to_combine_node,
-                    &graph,
-                    &parent,
-                    &stack,
-                    block,
-                    coefficient,
-                    n,
-                    value,
-                    tmp_bin,
-                    k,
-                    tmp_a,
-                    tmp_b,
-                    tmplol,
-                    full_found,
-                    partial_found,
-                    indexp,
-                    need_append
-                );
+                        &partial_relations,
+                        &graph,
+                        &parent,
+                        tmp_array,
+                        &to_combine_node,
+                        &stack,
+                        relations,
+                        smooth_numbers,
+                        block,
+                        coefficient,
+                        n,
+                        value,
+                        tmp_bin,
+                        full_found,
+                        partial_found,
+                        indexp,
+                        k,
+                        tmp_a,
+                        tmp_b,
+                        tmplol,
+                        need_append
+                    );
                 }
 
                 reset(&block);
                 reset(&to_batch);
                 reset(&coefficient);
+
                 second2 = time(NULL);
                 time_diff = second2-second1;
                 if (time_diff == 0)
                 {
-                    rate1 = (double)(*full_found);
-                    rate2 = (double)(*partial_found + *indexp);
+                    full_rate = (double)(*full_found);
+                    partial_rate = (double)(*partial_found + *indexp);
                 }
                 else
                 {
-                    rate1 = (double)(*full_found)/time_diff;
-                    rate2 = (double)(*partial_found + *indexp)/time_diff;
+                    full_rate = (double)(*full_found)/time_diff;
+                    partial_rate = (double)(*partial_found + *indexp)/time_diff;
                 }
 
                 if (dim+20 >= relations->len)
                 {
                     objective = dim+20-relations->len;
-                    mpf_set_d(tmpf,rate2);
-                    mpf_set_ui(var1,objective);
-                    mpf_mul(var1,var1,nb_large);
-                    mpf_mul(var1,var1,tmpf);
-                    mpf_mul_2exp(var1, var1, 1);
 
-                    mpf_set_d(var2,rate1);
-                    mpf_mul(var2,var2,nb_large);
-
-                    mpf_set_ui(tmpf,*indexp);
-                    mpf_div(tmpf,tmpf,nb_large);
-                    mpf_set_d(tmpf2,rate2);
-                    mpf_mul(tmpf,tmpf,tmpf2);
-                    mpf_add(var2,var2,tmpf);
-                    mpf_mul(tmpf,var2,var2);
-                    mpf_add(tmpf,tmpf,var1);
-                    mpf_sqrt(tmpf,tmpf);
-                    mpf_sub(tmpf,tmpf,var2);
-                    mpf_set_d(var3,rate2);
-                    mpf_div(tmpf,tmpf,var3);
-                    seconds = mpf_get_ui(tmpf);
+                    seconds = (double)objective / (full_rate + partial_rate*partial_rate/nb_large);
                 }
 
-                printf("\r%lu/(%lu+20+%lu) relations found : full = %lu ; partial = %lu (%lu) (r1 = %.2f ; r2 = %.2f ; %luh %lum %lus left)",relations->len,dim,addup,*full_found,*partial_found,*indexp,rate1,rate2,seconds/3600,(seconds%3600)/60,(seconds%60));
+                printf("\r%lu/(%lu+20+%lu) relations found : full = %lu ; partial = %lu (%lu) (r1 = %.2f ; r2 = %.2f ; %luh %lum %lus left)",
+                    relations->len,
+                    dim,
+                    addup,
+                    *full_found,
+                    *partial_found,
+                    *indexp,
+                    full_rate,
+                    partial_rate,
+                    seconds/3600,
+                    (seconds%3600)/60,
+                    (seconds%60)
+                );
+
                 fflush(stdout);
 
             }
         }
-        for (unsigned long i = 0 ; i < sieve_array.len ; i++) *(sieve_array.start+i) = 0;
-        reset(&tmp_block);
+        memset(sieve_array.start, 0, sieve_len*sizeof(unsigned short));
+        reset(&sieved_candidates);
     }
     gmp_randclear(state);
     
-    for (unsigned long i = 0 ; i < batch_array.len ; i++) mpz_clear(*(batch_array.start+i));
+    for (size_t i = 0 ; i < batch_array.len ; i++) mpz_clear(batch_array.start[i]);
     free(batch_array.start);
     batch_array.start = NULL;
-    for (unsigned long i = 0 ; i < block.len ; i++) mpz_clear(*(block.start+i));
+
+    for (size_t i = 0 ; i < block.len ; i++) mpz_clear(block.start[i]);
     free(block.start);
     block.start = NULL;
+
+    free(sieved_candidates.start);
+    sieved_candidates.start = NULL;
+
     free(sieve_array.start);
     sieve_array.start = NULL;
 
+    hashmap_graph_free(&graph);
+
+    hashmap_1d_free(&parent);
+
+    hashmap_2d_free(&partial_relations);
+
     for (size_t i = 0 ; i < batch_size ; i++)
     {
-        mpz_clear(tmp_array[i].x);
-        mpz_clear(tmp_array[i].y);
-        mpz_clear(tmp_array[i].small_p);
-        mpz_clear(tmp_array[i].big_p);
+        mpz_clears(
+            tmp_array[i].x,
+            tmp_array[i].y,
+            tmp_array[i].small_p,
+            tmp_array[i].big_p,
+            NULL
+        );
     }
     free(tmp_array);
 

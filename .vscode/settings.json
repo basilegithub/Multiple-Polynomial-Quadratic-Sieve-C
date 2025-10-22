@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "numbers": "c",
+        "omp.h": "c",
+        "polynomial_functions.h": "c",
+        "limits": "c",
+        "stdbool.h": "c",
+        "structures.h": "c",
+        "random": "c"
+    }
+}

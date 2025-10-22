@@ -4,7 +4,13 @@
 
 #include "structures.h"
 
-bool DFS(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_array_stack *stack)
+bool DFS(
+    Hashmap_graph graph,
+    dyn_array_stack *stack,
+    dyn_array *path,
+    mpz_t small_p,
+    mpz_t big_p
+)
 {
     append_eco(path, big_p);
 
@@ -12,7 +18,7 @@ bool DFS(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_a
 
     for (size_t i = 0 ; i < tmp_array->len ; i++)
     {
-        if (!mpz_cmp(small_p, *(tmp_array->start+i)))
+        if (!mpz_cmp(small_p, tmp_array->start[i]))
         {
             append_eco(path, small_p);
             return true; // path is found
@@ -37,13 +43,13 @@ bool DFS(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_a
         }
         if (!stack->size) break;
 
-        mpz_set(next_node, *(stack->data[stack->size-1].neighbors->start + stack->data[stack->size-1].next_index)); // Last element in stack
+        mpz_set(next_node, stack->data[stack->size-1].neighbors->start[stack->data[stack->size-1].next_index]); // Last element in stack
         stack->data[stack->size-1].next_index++;
 
         if (stack->size == 1) mpz_set(parent, big_p);
         else
         {
-            mpz_set(parent, *(path->start + path->len - 2));
+            mpz_set(parent, path->start[path->len - 2]);
         }
 
         if (!mpz_cmp(next_node, parent)) continue;
@@ -53,7 +59,7 @@ bool DFS(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_a
         tmp_array = hashmap_graph_get_ptr(&graph, next_node);
         for (size_t i = 0 ; i < tmp_array->len ; i++)
         {
-            if (!mpz_cmp(small_p, *(tmp_array->start+i)))
+            if (!mpz_cmp(small_p, tmp_array->start[i]))
             {
                 append_eco(path, small_p);
                 mpz_clears(next_node, parent, NULL);
@@ -67,11 +73,17 @@ bool DFS(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_a
     return false;
 }
 
-bool find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path, dyn_array_stack *stack)
+bool find_path(
+    Hashmap_graph graph,
+    dyn_array_stack *stack,
+    dyn_array *path,
+    mpz_t small_p,
+    mpz_t big_p
+)
 {
     if (!mpz_cmp_ui(small_p, 1))
     {
-        return DFS(graph, small_p, big_p, path, stack);
+        return DFS(graph, stack, path, small_p, big_p);
     }
     else
     {
@@ -84,13 +96,13 @@ bool find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path,
         // We excpect the node one to be a hub, thus it is more efficient to try to connect each prime to one
         // Otherwise we would need to "get out" of the node one, which has many neighbors
     
-        if (DFS(graph, tmp, small_p, &path_small_p_to_one, stack))
+        if (DFS(graph, stack, &path_small_p_to_one, tmp, small_p))
         {
-            if (DFS(graph, tmp, big_p, &path_big_p_to_one, stack))
+            if (DFS(graph, stack, &path_big_p_to_one, tmp, big_p))
             {
                 size_t index1 = path_small_p_to_one.len-1, index2 = path_big_p_to_one.len-1;
 
-                while (!mpz_cmp(*(path_small_p_to_one.start+index1), *(path_big_p_to_one.start+index2)))
+                while (!mpz_cmp(path_small_p_to_one.start[index1], path_big_p_to_one.start[index2]))
                 {
                     index1--;
                     index2--;
@@ -98,11 +110,11 @@ bool find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path,
 
                 for (size_t i = 0 ; i < index2+2 ; i++)
                 {
-                    append(path, *(path_big_p_to_one.start+i));
+                    append(path, path_big_p_to_one.start[i]);
                 }
                 for (size_t i = index1+1 ; i-- > 0 ; )
                 {
-                    append(path, *(path_small_p_to_one.start+i));
+                    append(path, path_small_p_to_one.start[i]);
                 }
                 mpz_clear(tmp);
                 free_dyn_array(&path_small_p_to_one);
@@ -112,10 +124,18 @@ bool find_path(Hashmap_graph graph, mpz_t small_p, mpz_t big_p, dyn_array *path,
         }
     }
 
-    return DFS(graph, small_p, big_p, path, stack);
+    return DFS(graph, stack, path, small_p, big_p);
 }
 
-void combine_path(Hashmap_PartialRelation *partial_relations, dyn_array path, mpz_t x, mpz_t n, mpz_t res_x, mpz_t res_y, PartialRelation *to_combine_node)
+void combine_path(
+    Hashmap_PartialRelation *partial_relations,
+    PartialRelation *to_combine_node,
+    dyn_array path,
+    mpz_t x,
+    mpz_t n,
+    mpz_t res_x,
+    mpz_t res_y
+)
 {
     mpz_t tmp, tmp2, tmp3, tmp4;
     mpz_inits(tmp, tmp2, tmp3, tmp4, NULL);
@@ -127,8 +147,8 @@ void combine_path(Hashmap_PartialRelation *partial_relations, dyn_array path, mp
 
     for (size_t i = 0 ; i < path.len-1 ; i++)
     {
-        mpz_set(tmp, *(path.start+i));
-        mpz_set(tmp2, *(path.start+i+1));
+        mpz_set(tmp, path.start[i]);
+        mpz_set(tmp2, path.start[i+1]);
         if (mpz_cmp(tmp, tmp2) > 0)
         {
             mpz_swap(tmp, tmp2);        
@@ -136,62 +156,49 @@ void combine_path(Hashmap_PartialRelation *partial_relations, dyn_array path, mp
 
         hashmap_2d_get_from_mpz(partial_relations, tmp, tmp2, to_combine_node);
 
-        mpz_mul(tmp3, res_y, to_combine_node->y);
-        mpz_set(res_y, tmp3);
+        mpz_mul(res_y, res_y, to_combine_node->y);
 
-        mpz_mul(tmp3, res_x, to_combine_node->x);
-        mpz_mod(res_x, tmp3, n);
-
-        // mpz_mul(tmp3,to_combine_node->x, to_combine_node->x);
-        // mpz_sub(tmp3, tmp3, n);
+        mpz_mul(res_x, res_x, to_combine_node->x);
+        mpz_mod(res_x, res_x, n);
     }
-
-    // mpz_mul(tmp3, res_x, res_x);
-    // mpz_mod(tmp3, tmp3, n);
-    // mpz_mod(tmp4, res_y, n);
-
     for (size_t i = 0 ; i < path.len ; i++)
     {
-        mpz_set(tmp3, *(path.start+i));
-        if (mpz_cmp_ui(tmp3, 1))
+        if (mpz_cmp_ui(path.start[i], 1))
         {
+            mpz_set(tmp3, path.start[i]);
             mpz_mul(tmp4, tmp3, tmp3);
             mpz_divexact(res_y, res_y, tmp4);
 
             mpz_invert(tmp3, tmp3, n);
-            mpz_mul(tmp4, tmp3, res_x);
-            mpz_mod(res_x, tmp4, n);
+            mpz_mul(tmp3, tmp3, res_x);
+            mpz_mod(res_x, tmp3, n);
         }
     }
-
-    // mpz_mul(tmp3, res_x, res_x);
-    // mpz_mod(tmp3, tmp3, n);
-    // mpz_mod(tmp4, res_y, n);
     
     mpz_clears(tmp, tmp2, tmp3, tmp4, NULL);
 }
 
 void handle_relations(
-    dyn_array* relations,
-    dyn_array* smooth_numbers,
-    PartialRelation *tmp_array,
     Hashmap_PartialRelation *partial_relations,
-    PartialRelation *to_combine_node,
     Hashmap_graph *graph,
     Hashmap_1D *parent,
+    PartialRelation *tmp_array,
+    PartialRelation *to_combine_node,
     dyn_array_stack *stack,
+    dyn_array* relations,
+    dyn_array* smooth_numbers,
     dyn_array block,
     dyn_array coefficient,
     mpz_t n,
     mpz_t value,
     mpz_t tmp_bin,
+    unsigned long* full_found,
+    unsigned long* partial_found,
+    unsigned long* indexp,
     unsigned long k,
     unsigned long tmp_a,
     unsigned long tmp_b,
     unsigned long tmplol,
-    unsigned long* full_found,
-    unsigned long* partial_found,
-    unsigned long* indexp,
     int* need_append
 )
 {
@@ -199,9 +206,9 @@ void handle_relations(
     mpz_init(tmp);
     if (mpz_cmp_ui((tmp_array+k)->small_p, 0)) // If small_p is not 0, ie relation has at most two large primes
     {
-        mpz_set(value, *(block.start+k));
-        mpz_mul(tmp, value, *(coefficient.start+2*k));
-        mpz_add(value, tmp, *(coefficient.start+2*k+1));
+        mpz_set(value, block.start[k]);
+        mpz_mul(tmp, value, coefficient.start[k<<1]);
+        mpz_add(value, tmp, coefficient.start[(k<<1)+1]);
         if (!mpz_cmp_ui((tmp_array+k)->big_p, 1)) // If big_p is 1, ie relation is full
         {
             append(smooth_numbers, value);
@@ -219,7 +226,7 @@ void handle_relations(
                 mpz_mul(tmp,value,value);
                 mpz_sub(value,tmp,n);
                 mpz_set((tmp_array+k)->y, value);
-                hashmap_2d_put_node(partial_relations, *(tmp_array+k));
+                hashmap_2d_put_node(partial_relations, tmp_array[k]);
                 (*indexp)++;
 
                 hashmap_graph_put(graph, (tmp_array+k)->small_p, (tmp_array+k)->big_p); // Add edge to graph
@@ -239,7 +246,7 @@ void handle_relations(
                     mpz_mul(tmp, value, value);
                     mpz_sub(tmp, tmp, n);
                     mpz_set((tmp_array+k)->y, tmp);
-                    hashmap_2d_put_node(partial_relations, *(tmp_array+k));
+                    hashmap_2d_put_node(partial_relations, tmp_array[k]);
                     (*indexp)++;
 
                     bool flag_big_prime = hashmap_graph_is_present(graph, (tmp_array+k)->big_p);
@@ -270,7 +277,7 @@ void handle_relations(
                         mpz_mul(tmp,value,value);
                         mpz_sub(tmp,tmp,n);
                         mpz_set((tmp_array+k)->y, tmp);
-                        hashmap_2d_put_node(partial_relations, *(tmp_array+k));
+                        hashmap_2d_put_node(partial_relations, tmp_array[k]);
                         (*indexp)++;
                     }
                     else
@@ -314,7 +321,7 @@ void handle_relations(
                             mpz_mul(tmp,value,value);
                             mpz_sub(tmp,tmp,n);
                             mpz_set((tmp_array+k)->y, tmp);
-                            hashmap_2d_put_node(partial_relations, *(tmp_array+k));
+                            hashmap_2d_put_node(partial_relations, tmp_array[k]);
                             (*indexp)++;
                         }
                         else // The two primes are part of the same connected component, one new cycle is detected, we now have to find the exact path
@@ -325,9 +332,9 @@ void handle_relations(
                             mpz_t res_x, res_y;
                             mpz_inits(res_x, res_y, NULL);
                             
-                            find_path(*graph, (tmp_array+k)->small_p, (tmp_array+k)->big_p, &path, stack);
+                            find_path(*graph, stack, &path, (tmp_array+k)->small_p, (tmp_array+k)->big_p);
 
-                            combine_path(partial_relations, path, value, n, res_x, res_y, to_combine_node);
+                            combine_path(partial_relations, to_combine_node, path, value, n, res_x, res_y);
 
                             append(relations, res_y);
                             append(smooth_numbers, res_x);
