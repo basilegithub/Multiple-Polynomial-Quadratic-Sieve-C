@@ -96,9 +96,7 @@ void append(dyn_array* array, mpz_t element);
 void append_eco(dyn_array* array, mpz_t element);
 void append_only(dyn_array* array, mpz_t element);
 void append_only_si(dyn_array* array, signed long element);
-void append_block(dyn_array* array, unsigned long block_len, mpz_t tmp_vec[block_len]);
 void append_classic(dyn_array_classic* array, unsigned long element);
-void append_block_classic(dyn_array_classic* array, unsigned long block_len, unsigned long tmp_vec[block_len]);
 
 // Delete functions
 
@@ -110,19 +108,12 @@ void delete_dyn_unsorted(dyn_array* array, unsigned long index);
 
 // Insert functions
 
-void insert(dyn_array* array, mpz_t element, unsigned long index);
 void insert_classic(dyn_array_classic* array, unsigned long element, unsigned long index);
-void insert_block(dyn_array* array, unsigned long index, unsigned long block_len, mpz_t element[block_len]);
 
 // Liberating arrays
 
 void reset(dyn_array* array);
 void free_dyn_array(dyn_array* array);
-
-// Query functions
-
-int is_present(dyn_array* array, mpz_t element);
-int is_present_ui(dyn_array* array, unsigned long param);
 
 // 1D Hashmap functions
 
@@ -139,7 +130,6 @@ void hashmap_graph_create(Hashmap_graph *hashmap, const size_t buckets);
 size_t hash_graph_mpz_strong(const Hashmap_graph *hashmap, const mpz_t key);
 void hashmap_graph_put(Hashmap_graph *hashmap, const mpz_t key, mpz_t value);
 bool hashmap_graph_is_present(Hashmap_graph *hashmap, const mpz_t key);
-void hashmap_graph_get(Hashmap_graph *hashmap, const mpz_t key, dyn_array *output);
 dyn_array* hashmap_graph_get_ptr(Hashmap_graph *hashmap, const mpz_t key);
 void hashmap_graph_free(Hashmap_graph *hashmap);
 
@@ -149,10 +139,8 @@ void hashmap_2d_create(Hashmap_PartialRelation *partial_relations, const size_t 
 void hashmap_2d_compute_key(const unsigned long small_p, const unsigned long big_p, mpz_t key);
 void hashmap_2d_compute_key_from_mpz(const mpz_t small_p, const mpz_t big_p, mpz_t key);
 size_t hash_2d_mpz_strong(const Hashmap_PartialRelation *partial_relations, const mpz_t key);
-void hashmap_2d_put(Hashmap_PartialRelation *partial_relations, const unsigned long small_p, const unsigned long big_p, const PartialRelation value);
 void hashmap_2d_put_node(Hashmap_PartialRelation *partial_relations, PartialRelation new_node);
 bool hashmap_2d_get_from_mpz(Hashmap_PartialRelation *partial_relations, const mpz_t small_p, const mpz_t big_p, PartialRelation *output);
-bool hashmap_2d_is_present_mpz(Hashmap_PartialRelation *partial_relations, const mpz_t small_p, const mpz_t big_p);
 void hashmap_2d_free(Hashmap_PartialRelation *partial_relations);
 
 // Stack functions

@@ -283,7 +283,7 @@ bool fermat_primality(mpz_t n)
     return to_return;
 }
 
-void multiply(const unsigned long n, const unsigned long index, const dyn_array_classic A, const bool b[n], bool res[n])
+void multiply(const dyn_array_classic A, const unsigned long n, const unsigned long index, const bool b[n], bool res[n])
 {
     bool * restrict tmp = calloc(n, sizeof(bool));
     unsigned long i = 0;
@@ -295,13 +295,13 @@ void multiply(const unsigned long n, const unsigned long index, const dyn_array_
 
     for (unsigned long k = 0 ; k < A.len ; k++)
     {
-        if (*(A_start+k) == index)
+        if (A_start[k] == index)
         {
             tmp[i] = tmp2;
             i++;
             tmp2 = 0;
         }
-        else tmp2 ^= B[*(A_start+k)];
+        else tmp2 ^= B[A_start[k]];
     }
     for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
     for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
@@ -381,7 +381,7 @@ void div_poly(mpz_t quotient, mpz_t remainder, const mpz_t poly_a, const mpz_t p
     mpz_clears(tmp,tmp2,NULL);
 }
 
-void poly_eval(const unsigned long n, const mpz_t poly, const bool x[n], bool res[n], const dyn_array_classic A, const unsigned long limit)
+void poly_eval(dyn_array_classic A, mpz_t poly, unsigned long n, bool x[n], bool res[n], unsigned long limit)
 {
     bool tmp2[n];
     for (unsigned long i = 0 ; i < n ; i++) tmp2[i] = false;
@@ -391,12 +391,12 @@ void poly_eval(const unsigned long n, const mpz_t poly, const bool x[n], bool re
     unsigned long degree = mpz_get_ui(tmp);
     for (unsigned long i = 0 ; i < degree ; i++)
     {
-        mpz_div_2exp(tmp,poly,degree-i);
+        mpz_div_2exp(tmp, poly, degree-i);
         if (mpz_odd_p(tmp))
         {
              for (unsigned long j = 0 ; j < n ; j++) tmp2[j] ^= x[j];
         }
-        multiply(n,limit,A,tmp2,tmp2);
+        multiply(A, n, limit, tmp2, tmp2);
     }
     if (mpz_odd_p(poly))
     {

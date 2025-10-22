@@ -258,9 +258,9 @@ void parallel_sieve(
                         if (flag_batch_smooth)
                         {
                             batch_smooth(
+                                tmp_array,
                                 &to_batch,
                                 &batch_array,
-                                tmp_array,
                                 prod_primes,
                                 prod_primes_p1,
                                 cst,
@@ -272,8 +272,8 @@ void parallel_sieve(
                         else
                         {
                             naive_smooth(
-                                &to_batch,
                                 tmp_array,
+                                &to_batch,
                                 primes,
                                 cst,
                                 cst2,
@@ -355,6 +355,12 @@ void parallel_sieve(
 
             free(sieve_array.start);
             sieve_array.start = NULL;
+
+            hashmap_graph_free(&graph);
+
+            hashmap_1d_free(&parent);
+
+            hashmap_2d_free(&partial_relations);
 
             for (size_t i = 0 ; i < batch_size ; i++)
             {

@@ -265,7 +265,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
             null_space[i] += rand()%2;
         }
 
-        if (mpz_cmp_ui(poly, 1) > 0) poly_eval(relations.len, poly, null_space, null_space, bin_matrix, len);
+        if (mpz_cmp_ui(poly, 1) > 0) poly_eval(bin_matrix, poly, relations.len, null_space, null_space, len);
 
         for (size_t i = 0 ; i < block_len ; i++)
         {
@@ -290,7 +290,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
                 {
                     for (size_t j = 0 ; j < relations.len ; j++) tmp_vec[j] = tmp_array[j];
 
-                    multiply(relations.len, len, bin_matrix, tmp_array, tmp_array);
+                    multiply(bin_matrix, relations.len, len, tmp_array, tmp_array);
                     k++;
                     flag = false;
                     for (size_t j = 0 ; j < relations.len && !flag ; j++)
@@ -312,7 +312,7 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
 
             if (flag_update_minimal_poly)
             {
-                wiedemann(bin_matrix, relations.len, tmp_array, len, poly_res, degree);
+                wiedemann(bin_matrix, poly_res, relations.len, tmp_array, len, degree);
                 mpz_set(tmp, poly_res);
                 my_int_log2(tmp);
                 degree += mpz_get_ui(tmp);
@@ -325,11 +325,11 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
                 }
 
                 poly_prod(poly, poly, poly_res);
-                poly_eval(relations.len, poly_res, null_space, null_space, bin_matrix, len);
+                poly_eval(bin_matrix, poly_res, relations.len, null_space, null_space, len);
 
                 for (size_t j = 0 ; j < relations.len ; j++) tmp_array[j] = (null_space[j]>>i)&1;
 
-                if (mpz_cmp_ui(poly_shift, 1) > 0) poly_eval(relations.len, poly_shift, tmp_array, tmp_array, bin_matrix, len);
+                if (mpz_cmp_ui(poly_shift, 1) > 0) poly_eval(bin_matrix, poly_shift, relations.len, tmp_array, tmp_array, len);
             }
 
             tm = *localtime(&(time_t){time(NULL)});

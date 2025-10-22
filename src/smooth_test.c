@@ -176,7 +176,7 @@ void build_remainder_tree(dyn_array* reported, dyn_array* tmp_array, mpz_t prod_
     }
 }
 
-void batch_smooth(dyn_array* reported, dyn_array* tmp_array, PartialRelation *tmp_array2, mpz_t prod_primes, mpz_t prod_primes_p1, mpz_t limit, mpz_t limit_2, unsigned long prime, gmp_randstate_t state)
+void batch_smooth(PartialRelation *tmp_array2, dyn_array* reported, dyn_array* tmp_array, mpz_t prod_primes, mpz_t prod_primes_p1, mpz_t limit, mpz_t limit_2, unsigned long prime, gmp_randstate_t state)
 {
     mpz_t tmp, tmp2;
     mpz_inits(tmp, tmp2, NULL);
@@ -246,7 +246,7 @@ void batch_smooth(dyn_array* reported, dyn_array* tmp_array, PartialRelation *tm
     mpz_clears(tmp, tmp2, NULL);
 }
 
-void naive_smooth(dyn_array* reported, PartialRelation *tmp_array, dyn_array_classic primes, mpz_t limit, mpz_t limit_2, gmp_randstate_t state)
+void naive_smooth(PartialRelation *tmp_array, dyn_array* reported, dyn_array_classic primes, mpz_t limit, mpz_t limit_2, gmp_randstate_t state)
 {
     mpz_t remaining_factor, prime_divisor_1, prime_divisor_2;
     mpz_inits(remaining_factor, prime_divisor_1, prime_divisor_2, NULL);

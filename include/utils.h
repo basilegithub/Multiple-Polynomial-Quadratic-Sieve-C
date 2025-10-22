@@ -33,13 +33,13 @@ bool fermat_primality(mpz_t n);
 
 // Linear algebra functions
 
-void multiply(unsigned long n, unsigned long index, dyn_array_classic A, bool b[n], bool res[n]);
+void multiply(dyn_array_classic A, unsigned long n, unsigned long index, bool b[n], bool res[n]);
 bool dot_prod(unsigned long n, bool lbd[n], bool x[n]);
 
 // Wiedemann polynomial functions
 
 void poly_prod(mpz_t res, mpz_t poly_a, mpz_t poly_b);
 void div_poly(mpz_t quotient, mpz_t remainder, mpz_t poly_a, mpz_t poly_b);
-void poly_eval(unsigned long n, mpz_t poly, bool x[n], bool res[n], dyn_array_classic A, unsigned long limit);
+void poly_eval(dyn_array_classic A, mpz_t poly, unsigned long n, bool x[n], bool res[n], unsigned long limit);
 
 #endif // UTILS_H

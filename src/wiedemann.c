@@ -36,7 +36,7 @@ void poly_anul(mpz_t D, mpz_t B, unsigned long m)
     mpz_clears(A, C, E, Q, R, degB, NULL);
 }
 
-void wiedemann(dyn_array_classic A, unsigned long n, bool vec[n], unsigned long limit, mpz_t poly_res, unsigned long degree)
+void wiedemann(dyn_array_classic A, mpz_t poly_res, unsigned long n, bool vec[n], unsigned long limit, unsigned long degree)
 {
     bool vector_tmp[n];
     bool block[n];
@@ -44,7 +44,7 @@ void wiedemann(dyn_array_classic A, unsigned long n, bool vec[n], unsigned long 
     memset(vector_tmp, 0, n * sizeof *vector_tmp);
     memset(block, 0, n * sizeof *block);
     
-    multiply(n, limit, A, vec, block);
+    multiply(A, n, limit, vec, block);
     mpz_t poly_product, sequence, annihilator_poly;
     mpz_init_set_ui(poly_product, 1);
     mpz_inits(sequence, annihilator_poly, NULL);
@@ -66,14 +66,14 @@ void wiedemann(dyn_array_classic A, unsigned long n, bool vec[n], unsigned long 
         {
             mpz_add_ui(sequence,sequence, dot_prod(n, lambda, vector_tmp));
             mpz_mul_2exp(sequence, sequence, 1);
-            multiply(n, limit, A, vector_tmp, vector_tmp);
+            multiply(A, n, limit, vector_tmp, vector_tmp);
         }
         mpz_add_ui(sequence, sequence, dot_prod(n, lambda, vector_tmp));
         mpz_set_ui(annihilator_poly, 1);
 
         poly_anul(annihilator_poly, sequence, n-d);
         poly_prod(poly_product, poly_product, annihilator_poly);
-        poly_eval(n, annihilator_poly, block, block, A, limit);
+        poly_eval(A, annihilator_poly, n, block, block, limit);
         my_int_log2(annihilator_poly);
         d += mpz_get_ui(annihilator_poly);
 
