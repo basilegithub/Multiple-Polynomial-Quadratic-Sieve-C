@@ -30,6 +30,7 @@ void recursive_exp(mpf_t res, mpz_t pow, mpf_t e)
         mpf_init(tmpf);
         mpz_t tmp;
         mpz_init(tmp);
+
         if (mpz_even_p(pow))
         {
             mpz_div_ui(tmp, pow, 2);
@@ -59,8 +60,7 @@ void myexp(mpf_t res, mpf_t x, mpf_t e)
     mpf_t tmp_res, rest;
     mpz_t tmp;
 
-    mpf_init(rest);
-    mpf_init(tmp_res);
+    mpf_inits(tmp_res, rest, NULL);
     mpz_init(tmp);
 
     mpz_set_f(tmp, x);
@@ -116,8 +116,7 @@ void natural_log(mpf_t res, mpf_t x, mpf_t ln2, mpf_t e)
 
     mpf_t a, tmpf;
 
-    mpf_init(tmpf);
-    mpf_init(a);
+    mpf_inits(a, tmpf, NULL);
     mpf_set_prec(a, 32);
     mpf_set_z(a, tmp);
     mpf_mul(a, a, ln2);
@@ -130,6 +129,7 @@ void natural_log(mpf_t res, mpf_t x, mpf_t ln2, mpf_t e)
         mpf_add(a, a, tmpf);
     }
     mpf_set(res, a);
+
     mpz_clear(tmp);
     mpf_clears(tmpf, a, NULL);
 }
@@ -140,12 +140,11 @@ void my_log10(mpf_t res, mpf_t x, mpf_t ln2, mpf_t ln10, mpf_t e)
 
     mpz_init(tmp);
     mpz_set_f(tmp, x);
-    mpz_set_ui(tmp,mpz_sizeinbase(tmp, 2));
+    mpz_set_ui(tmp, mpz_sizeinbase(tmp, 2));
 
     mpf_t a, tmpf;
 
-    mpf_init(tmpf);
-    mpf_init(a);
+    mpf_inits(a, tmpf, NULL);
     mpf_set_prec(a, 32);
     mpf_set_z(a, tmp);
     mpf_mul(a, a, ln2);
@@ -167,14 +166,16 @@ int my_legendre(mpz_t n, unsigned long p)
 {
     mpz_t tmp;
     mpz_init(tmp);
+    mpz_mod_ui(tmp, n, p);
+
     unsigned long tmpl;
-    mpz_mod_ui(tmp,n,p);
     tmpl = mpz_get_ui(tmp);
+
     int t = 1;
     unsigned long tmps;
     while (tmpl)
     {
-        while (tmpl%2 == 0)
+        while (!(tmpl&1))
         {
             tmpl >>= 1;
             if (p%8 == 3 || p%8 == 5) t = -t;
@@ -192,80 +193,87 @@ int my_legendre(mpz_t n, unsigned long p)
 
 void sqrt_mod(mpz_t n, const unsigned long p, gmp_randstate_t state)
 {
-    mpz_t z,tmp,tmp2,P_value;
+    mpz_t z, tmp, P_value;
+    mpz_inits(z, tmp, NULL);
+
     unsigned long P;
     unsigned long tmp3;
     unsigned long r = 0;
-    mpz_init(z);
-    mpz_init(tmp);
 
-    mpz_mod_ui(n,n,p);
+    mpz_mod_ui(n, n, p);
     P = p-1;
-    mpz_init_set_ui(P_value,P);
-    mpz_set_ui(tmp,p);
-    mpz_urandomm(z,state,tmp);
-    if (mpz_cmp_ui(z,1) != 1) mpz_set_ui(z,2);
-    while (my_legendre(z,p) != -1)
+    mpz_init_set_ui(P_value, P);
+    mpz_set_ui(tmp, p);
+
+    mpz_urandomm(z, state, tmp);
+    if (mpz_cmp_ui(z, 1) != 1) mpz_set_ui(z, 2);
+
+    while (my_legendre(z, p) != -1)
     {
-        mpz_urandomm(z,state,tmp);
-        if (mpz_cmp_ui(z,1) != 1) mpz_set_ui(z,2);
+        mpz_urandomm(z, state, tmp);
+        if (mpz_cmp_ui(z, 1) != 1) mpz_set_ui(z, 2);
     }
-    while (P%2 == 0)
+
+    while (!(P&1))
     {
         P >>= 1;
         r++;
     }
     mpz_t generator, lambda, omega, res, m, two_mpz;
-    mpz_init(generator);
-    mpz_init(lambda);
-    mpz_init(omega);
-    mpz_powm_ui(generator,z,P,tmp);
-    mpz_powm_ui(lambda,n,P,tmp);
+    mpz_inits(generator, lambda, omega, NULL);
+
+    mpz_powm_ui(generator, z, P, tmp);
+    mpz_powm_ui(lambda, n, P, tmp);
+
     tmp3 = (P+1)>>1;
-    mpz_powm_ui(omega,n,tmp3,tmp);
-    mpz_init_set_ui(res,0);
+    mpz_powm_ui(omega, n, tmp3, tmp);
+
+    mpz_init_set_ui(res, 0);
     mpz_init(m);
-    mpz_init_set_ui(two_mpz,2);
-    mpz_t tmp_l;
-    mpz_init(tmp_l);
-    mpz_init(tmp2);
+    mpz_init_set_ui(two_mpz, 2);
+
+    mpz_t tmp_l, tmp2;
+    mpz_inits(tmp_l, tmp2, NULL);
+
     while (1)
     {
-        if (mpz_cmp_ui(lambda,0) == 0)
+        if (!mpz_cmp_ui(lambda, 0))
         {
-            mpz_set_ui(n,0);
+            mpz_set_ui(n, 0);
             break;
         }
-        if (mpz_cmp_ui(lambda,1) == 0)
+
+        if (!mpz_cmp_ui(lambda, 1))
         {
-            mpz_set(n,omega);
+            mpz_set(n, omega);
             break;
         }
-        mpz_set_ui(m,1);
-        while (mpz_cmp_ui(m,r) < 0)
+
+        mpz_set_ui(m, 1);
+        while (mpz_cmp_ui(m, r) < 0)
         {
-            mpz_powm(tmp_l,two_mpz,m,P_value);
-            mpz_powm(tmp_l,lambda,tmp_l,tmp);
-            if (mpz_cmp_ui(tmp_l,1) == 0) break;
-            mpz_add_ui(m,m,1);
+            mpz_powm(tmp_l, two_mpz, m, P_value);
+            mpz_powm(tmp_l, lambda, tmp_l, tmp);
+
+            if (!mpz_cmp_ui(tmp_l, 1)) break;
+
+            mpz_add_ui(m, m, 1);
         }
-        mpz_ui_sub(tmp2,r-1,m);
-        mpz_powm(tmp_l,two_mpz,tmp2,P_value);
+
+        mpz_ui_sub(tmp2, r-1, m);
+        mpz_powm(tmp_l, two_mpz, tmp2, P_value);
         mpz_mul_2exp(tmp2, tmp_l, 1);
 
-        mpz_powm(tmp2,generator,tmp2,tmp);
-        mpz_mul(lambda,lambda,tmp2);
-        mpz_mod(lambda,lambda,tmp);
+        mpz_powm(tmp2, generator, tmp2, tmp);
+        mpz_mul(lambda, lambda, tmp2);
+        mpz_mod(lambda, lambda, tmp);
 
-        mpz_powm(tmp2,generator,tmp_l,tmp);
-        mpz_mul(omega,omega,tmp2);
-        mpz_mod(omega,omega,tmp);
+        mpz_powm(tmp2, generator, tmp_l, tmp);
+        mpz_mul(omega, omega, tmp2);
+        mpz_mod(omega, omega, tmp);
     }
-    mpz_clears(z, tmp, tmp2, P_value, generator, lambda, omega, res, m, two_mpz, NULL);
-}
 
-int mpz_equal(const mpz_t a, const mpz_t b) {
-    return (mpz_cmp(a, b));
+    mpz_clears(z, tmp, tmp2, P_value, generator, lambda, omega, res, m, two_mpz, NULL);
 }
 
 bool fermat_primality(mpz_t n)
@@ -273,6 +281,7 @@ bool fermat_primality(mpz_t n)
     mpz_t res, base, exponent;
     mpz_init_set_ui(base, 2);
     mpz_inits(res, exponent, NULL);
+
     mpz_sub_ui(exponent, n, 1);
 
     mpz_powm(res, base, exponent, n);
@@ -323,72 +332,79 @@ bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
 void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp_poly;
-    mpz_init_set_ui(tmp_poly,0);
+    mpz_init_set_ui(tmp_poly, 0);
+
     mpz_t tmp;
-    mpz_init(tmp);
-    mpz_set(tmp,poly_a);
+    mpz_init_set(tmp, poly_a);
     my_int_log2(tmp);
+
     for (unsigned long i = mpz_get_ui(tmp) ; i > 0 ; i--)
     {
-        mpz_div_2exp(tmp,poly_a,i);
-        if (mpz_odd_p(tmp)) mpz_xor(tmp_poly,tmp_poly,poly_b);
-        mpz_mul_2exp(tmp_poly,tmp_poly,1);
+        mpz_div_2exp(tmp, poly_a, i);
+        if (mpz_odd_p(tmp)) mpz_xor(tmp_poly, tmp_poly, poly_b);
+        mpz_mul_2exp(tmp_poly, tmp_poly, 1);
     }
-    if (mpz_odd_p(poly_a)) mpz_xor(tmp_poly,tmp_poly,poly_b);
-    mpz_set(res,tmp_poly);
-    mpz_clears(tmp,tmp_poly,NULL);
+
+    if (mpz_odd_p(poly_a)) mpz_xor(tmp_poly, tmp_poly, poly_b);
+    mpz_set(res, tmp_poly);
+
+    mpz_clears(tmp, tmp_poly, NULL);
 }
 
 void div_poly(mpz_t quotient, mpz_t remainder, const mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp, tmp2;
-    mpz_init_set(tmp,poly_a); // problem is there
-    mpz_init_set(tmp2,poly_b); // or at this line : GNU MP cannot reallocate memory (new_size = 40000; old_size = 4)
+    mpz_init_set(tmp, poly_a);
+    mpz_init_set(tmp2, poly_b);
     my_int_log2(tmp);
     my_int_log2(tmp2);
-    if (mpz_cmp(tmp,tmp2) < 0)
+    if (mpz_cmp(tmp, tmp2) < 0)
     {
-        mpz_set(remainder,poly_a);
-        mpz_set_ui(quotient,0);
+        mpz_set(remainder, poly_a);
+        mpz_set_ui(quotient, 0);
     }
     else
     {
-        mpz_set(remainder,poly_a);
-        mpz_set_ui(quotient,0);
-        mpz_set(tmp,poly_a);
-        mpz_set(tmp2,poly_b);
+        mpz_set(remainder, poly_a);
+        mpz_set_ui(quotient, 0);
+        mpz_set(tmp, poly_a);
+        mpz_set(tmp2, poly_b);
         my_int_log2(tmp);
         my_int_log2(tmp2);
         signed long dif = mpz_get_ui(tmp)-mpz_get_ui(tmp2);
+
         for (signed long j = dif ; j > 0 ; j--)
         {
-            if (mpz_cmp_ui(remainder,0))
+            if (mpz_cmp_ui(remainder, 0))
             {
-                mpz_add_ui(quotient,quotient,1);
-                mpz_mul_2exp(tmp,poly_b,j);
-                mpz_xor(remainder,remainder,tmp);
+                mpz_add_ui(quotient, quotient, 1);
+                mpz_mul_2exp(tmp, poly_b, j);
+                mpz_xor(remainder, remainder, tmp);
             }
-            mpz_mul_ui(quotient,quotient,2);
+            mpz_mul_2exp(quotient, quotient, 1);
         }
-        mpz_set(tmp,remainder);
+
+        mpz_set(tmp, remainder);
         my_int_log2(tmp);
-        if (mpz_cmp_ui(remainder,0) && mpz_cmp(tmp,tmp2) > -1)
+        if (mpz_cmp_ui(remainder, 0) && mpz_cmp(tmp, tmp2) > -1)
         {
-            mpz_add_ui(quotient,quotient,1);
-            mpz_xor(remainder,remainder,poly_b);
+            mpz_add_ui(quotient, quotient, 1);
+            mpz_xor(remainder, remainder, poly_b);
         }
     }
-    mpz_clears(tmp,tmp2,NULL);
+    mpz_clears(tmp, tmp2, NULL);
 }
 
 void poly_eval(dyn_array_classic A, mpz_t poly, unsigned long n, bool x[n], bool res[n], unsigned long limit)
 {
-    bool tmp2[n];
-    for (unsigned long i = 0 ; i < n ; i++) tmp2[i] = false;
     mpz_t tmp;
-    mpz_init_set(tmp,poly);
+    mpz_init_set(tmp, poly);
     my_int_log2(tmp);
+
+    bool *tmp2 = calloc(n, sizeof(bool));
+
     unsigned long degree = mpz_get_ui(tmp);
+
     for (unsigned long i = 0 ; i < degree ; i++)
     {
         mpz_div_2exp(tmp, poly, degree-i);

@@ -59,7 +59,7 @@ unsigned long compute_best_mult(mpf_t best_time, mpf_t work, mpf_t time1, mpf_t 
     for (unsigned long k = 1 ; k < 40 ; k++)
     {
         mpz_mul_ui(n, N, k);
-        mpf_set_z(tmpf ,n);
+        mpf_set_z(tmpf, n);
         natural_log(tmpf, tmpf, ln2, e);
         natural_log(tmpf2, tmpf, ln2, e);
         mpf_mul(tmpf, tmpf, tmpf2);
@@ -160,6 +160,7 @@ void compute_factor_base(dyn_array_classic* primes, dyn_array* roots, dyn_array_
         {
             append_classic(primes, B.start[i]);
             mpz_set(tmp2, n);
+
             sqrt_mod(tmp2, B.start[i], state);
             append(roots, tmp2);
             mpz_mul_ui(*prod_primes, *prod_primes, B.start[i]);

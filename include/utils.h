@@ -28,7 +28,6 @@ void my_log10(mpf_t res, mpf_t x, mpf_t ln2, mpf_t ln10, mpf_t e);
 
 int my_legendre(mpz_t n, unsigned long p);
 void sqrt_mod(mpz_t n, unsigned long p, gmp_randstate_t state);
-int mpz_equal(const mpz_t a, const mpz_t b);
 bool fermat_primality(mpz_t n);
 
 // Linear algebra functions
