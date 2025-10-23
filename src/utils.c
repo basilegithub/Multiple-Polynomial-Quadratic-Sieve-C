@@ -353,6 +353,37 @@ void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B,
     }
 }
 
+size_t* dense_multiply(const size_t *matrix_A, const size_t *matrix_B, const size_t len_A, const size_t len_B)
+{
+    size_t *output = calloc(len_A, sizeof(size_t));
+
+    size_t tmp;
+
+    for (size_t i = 0 ; i < len_A ; i++)
+    {
+        tmp = 0;
+        for (size_t j = 0 ; j < len_B ; j++)
+        {
+            tmp ^= matrix_B[j] & ((matrix_A[i] >> len_B-j-1)&1);
+        }
+    }
+    return output;
+}
+
+void sparse_multiply_transpose(const dyn_array_classic sparse_matrix, const size_t *vector, size_t *output, const unsigned long limit)
+{
+    size_t row_index = 0;
+
+    for (size_t i = 0 ; i < sparse_matrix.len ; i++)
+    {
+        if (sparse_matrix.start[i] == limit) row_index++;
+        else
+        {
+            output[sparse_matrix.start[i]] ^= vector[row_index];
+        }
+    }
+}
+
 void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp_poly;
