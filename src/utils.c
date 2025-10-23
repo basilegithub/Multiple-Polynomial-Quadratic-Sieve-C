@@ -329,6 +329,30 @@ bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
     return tmp;
 }
 
+void add_vectors(size_t *output, const size_t *vec_a, const size_t *vec_b, const size_t N)
+{
+    for (size_t i = 0 ; i < N ; i++)
+    {
+        output[i] = vec_a[i] ^ vec_b[i];
+    }
+}
+
+void identity(size_t *output, const size_t N)
+{
+    for (size_t i = 0 ; i < N ; i++)
+    {
+        output[i] = (1<<(N-i-1));
+    }
+}
+
+void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t N)
+{
+    for (size_t i = 0 ; i < N ; i++)
+    {
+        output[i] = (matrix_A[i]<<N) | matrix_B[i];
+    }
+}
+
 void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp_poly;

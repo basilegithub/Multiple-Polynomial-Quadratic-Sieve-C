@@ -34,6 +34,9 @@ bool fermat_primality(mpz_t n);
 
 void multiply(dyn_array_classic A, unsigned long n, unsigned long index, bool b[n], bool res[n]);
 bool dot_prod(unsigned long n, bool lbd[n], bool x[n]);
+void add_vectors(size_t *output, const size_t *vec_a, const size_t *vec_b, const size_t N);
+void identity(size_t *output, const size_t N);
+void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t N);
 
 // Wiedemann polynomial functions
 
