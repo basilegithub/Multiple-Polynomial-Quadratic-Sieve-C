@@ -791,36 +791,39 @@ int main()
             }
         }
     }
-    else
+    
+    dyn_array_classic bin_matrix, rel_weight;
+    init_classic(&bin_matrix);
+    init_classic(&rel_weight);
+
+    unsigned long nonzero;
+    double density;
+    unsigned long nb_lines;
+
+    build_sparse_matrix(relations, &bin_matrix, &rel_weight, primes, &nb_lines, &nonzero, &density);
+
+    unsigned long len = relations.len;
+
+    tm = *localtime(&(time_t){time(NULL)});
+    log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
+
+    unsigned long merge_bound = 5;
+
+    reduce_matrix(&relations, &smooth_numbers, &bin_matrix, &rel_weight, N, len, merge_bound);
+
+    count(logfile, bin_matrix, len, relations.len);
+
+    log_blank_line(logfile);
+
+    bin_matrix.size = bin_matrix.len;
+    bin_matrix.start = realloc(bin_matrix.start, bin_matrix.len*sizeof(unsigned long));
+
+    if (false)
     {
-        dyn_array_classic bin_matrix, rel_weight;
-        init_classic(&bin_matrix);
-        init_classic(&rel_weight);
-
-        unsigned long nonzero;
-        double density;
-        unsigned long nb_lines;
-
-        build_sparse_matrix(relations, &bin_matrix, &rel_weight, primes, &nb_lines, &nonzero, &density);
-
-        unsigned long len = relations.len;
-
-        tm = *localtime(&(time_t){time(NULL)});
-        log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
-
-        unsigned long merge_bound = 5;
-
-        reduce_matrix(&relations, &smooth_numbers, &bin_matrix, &rel_weight, N, len, merge_bound);
-
-        count(logfile, bin_matrix, len, relations.len);
-
-        log_blank_line(logfile);
-
-        bin_matrix.size = bin_matrix.len;
-        bin_matrix.start = realloc(bin_matrix.start, bin_matrix.len*sizeof(unsigned long));
-
         compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
     }
+
+
     
 
     if (logfile) fclose(logfile);

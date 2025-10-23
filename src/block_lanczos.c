@@ -3,9 +3,12 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "structures.h"
 #include "utils.h"
+
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 unsigned int switch_indices(size_t d, size_t mask)
 {
@@ -108,7 +111,7 @@ void extract_columns(size_t *W_inv, size_t *d, size_t *T, size_t N)
     }
 }
 
-void block_lanczos(dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long index)
+void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long index)
 {
     size_t *Y = calloc(nb_relations, sizeof(size_t));
 
@@ -199,6 +202,35 @@ void block_lanczos(dyn_array_classic sparse_matrix, size_t nb_relations, size_t 
 
         i++;
     }
+
+    add_vectors(tmp, X, Y, nb_relations);
+    concatenate(tmp2, tmp, V, block_size);
+
+    mpz_t *matrix = calloc(2*block_size, sizeof(mpz_t));
+    for (size_t i = 0 ; i < 2*block_size ; i++) mpz_init_set_ui(matrix[i], 0);
+
+    mpz_t *tmp_matrix = calloc(2*block_size, sizeof(mpz_t));
+    for (size_t i = 0 ; i < 2*block_size ; i++) mpz_init_set_ui(tmp_matrix[i], 0);
+
+    multiply_sparse(sparse_matrix, nb_relations, index, tmp2, tmp);
+    transpose_dense(matrix, tmp, nb_relations, 2*block_size);
+
+    transpose_dense(tmp_matrix, tmp2, nb_relations, 2*block_size);
+
+    solve(matrix, tmp_matrix, nb_relations, 2*block_size);
+
+    for (size_t i = 0 ; i < 2*block_size ; i++)
+    {
+        if (!(mpz_cmp_ui(matrix[i], 0)))
+        {
+            append(output, tmp_matrix[i]);
+        }
+    }
+    if (output->len == 0)
+    {
+        block_lanczos(output, sparse_matrix, nb_relations, MIN(2*block_size, 8), index);
+    }
+    return;
 }
 
 void solve(mpz_t *matrix, mpz_t *kernel, size_t nb_relations, size_t matrix_len)
