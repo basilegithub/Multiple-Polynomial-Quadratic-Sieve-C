@@ -15,7 +15,7 @@ unsigned int switch_indices(size_t d, size_t mask)
     return (~d) & mask;
 }
 
-void multiply_d(size_t *output, const size_t *dense_matrix, const size_t d, const size_t N)
+void multiply_d(size_t *restrict output, const size_t *restrict dense_matrix, const size_t d, const size_t N)
 {
     for (size_t i = 0 ; i < N ; i++)
     {
@@ -107,12 +107,54 @@ void extract_columns(size_t *W_inv, size_t *d, size_t *T, size_t N)
     *d = 0;
     for (size_t i = 0 ; i < s_len ; i++)
     {
-        *d |= (1<<S[i]);
+        *d |= (1<<(N-S[i]-1));
+    }
+
+    printf("%zu\n", *d);
+
+    free(M);
+    free(ident);
+    free(S);
+}
+
+void solve(mpz_t *matrix, mpz_t *kernel, size_t nb_relations, size_t matrix_len)
+{
+    size_t k = 0;
+
+    for (size_t i = 0 ; i < nb_relations ; i++)
+    {
+        size_t index = k;
+        bool pivot_found = false;
+        for (size_t j = k ; j < matrix_len ; j++)
+        {
+            if (mpz_tstbit(matrix[j], nb_relations-i-1))
+            {
+                mpz_swap(matrix[j], matrix[k]);
+                mpz_swap(kernel[j], kernel[k]);
+                k++;
+                index = j;
+                pivot_found = true;
+                break;
+            }
+        }
+
+        if (pivot_found)
+        {
+            for (size_t j = index+1 ; j < matrix_len ; j++)
+            {
+                if (mpz_tstbit(matrix[j], nb_relations-i-1))
+                {
+                    mpz_xor(matrix[j], matrix[j], matrix[k-1]);
+                    mpz_xor(kernel[j], kernel[j], kernel[k-1]);
+                }
+            }
+        }
     }
 }
 
-void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long index)
+void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long factor_base_size, unsigned long index)
 {
+
     size_t *Y = calloc(nb_relations, sizeof(size_t));
 
     for (size_t i = 0 ; i < nb_relations ; i++)
@@ -125,10 +167,13 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
     size_t *tmp = calloc(nb_relations, sizeof(size_t));
     size_t *tmp2 = calloc(nb_relations, sizeof(size_t));
 
+    size_t *tmp_intermediate = calloc(factor_base_size, sizeof(size_t));
+    size_t *tmp_indermediate2 = calloc(factor_base_size, sizeof(size_t));
+
     size_t *V0 = calloc(nb_relations, sizeof(size_t));
 
-    multiply_sparse(sparse_matrix, nb_relations, index, Y, tmp);
-    sparse_multiply_transpose(sparse_matrix, tmp, V0, index);
+    multiply_sparse(sparse_matrix, factor_base_size, index, Y, tmp_intermediate);
+    sparse_multiply_transpose(sparse_matrix, tmp_intermediate, V0, index, nb_relations);
 
     size_t *P = calloc(nb_relations, sizeof(size_t));
 
@@ -164,8 +209,8 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
 
     while (d && i <= (double)sparse_matrix.len/((double)block_size - 0.764) + 10)
     {
-        multiply_sparse(sparse_matrix, nb_relations, index, V, tmp);
-        sparse_multiply_transpose(sparse_matrix, tmp, Z, index);
+        multiply_sparse(sparse_matrix, factor_base_size, index, V, tmp_intermediate);
+        sparse_multiply_transpose(sparse_matrix, tmp_intermediate, Z, index, nb_relations);
 
         dense_multiply_transpose(vAv, V, Z, nb_relations, block_size);
         dense_multiply_transpose(vAAv, Z, Z, nb_relations, block_size);
@@ -173,8 +218,8 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
         extract_columns(W_inv, &d, vAv, block_size);
 
         dense_multiply_transpose(tmp, V, V0, nb_relations, block_size);
-        tmp2 = dense_multiply(W_inv, tmp, block_size, block_size);
-        tmp = dense_multiply(V, tmp2, nb_relations, block_size);
+        dense_multiply(tmp2, W_inv, tmp, block_size, block_size);
+        dense_multiply(tmp, V, tmp2, nb_relations, block_size);
         add_vectors(tmp2, X, tmp, nb_relations);
         memcpy(X, tmp2, nb_relations*sizeof(size_t));
 
@@ -183,14 +228,14 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
         multiply_d(tmp_small, vAAv, d, block_size);
         multiply_d(tmp_small2, vAv, neg_d, block_size);
         add_vectors(tmp_small3, tmp_small, tmp_small2, block_size);
-        c = dense_multiply(W_inv, tmp_small3, block_size, block_size);
+        dense_multiply(c, W_inv, tmp_small3, block_size, block_size);
 
         multiply_d(intermediate_result_1, Z, d, block_size);
         multiply_d(intermediate_result_2, V, neg_d, block_size);
-        intermediate_result_3 = dense_multiply(V, c, nb_relations, block_size);
+        dense_multiply(intermediate_result_3, V, c, nb_relations, block_size);
         multiply_d(intermediate_result_4, vAv, d, block_size);
-        intermediate_result_5 = dense_multiply(P, intermediate_result_4, nb_relations, block_size);
-        intermediate_result_6 = dense_multiply(V, W_inv, nb_relations, block_size);
+        dense_multiply(intermediate_result_5, P, intermediate_result_4, nb_relations, block_size);
+        dense_multiply(intermediate_result_6, V, W_inv, nb_relations, block_size);
         multiply_d(intermediate_result_7, P, neg_d, block_size);
 
         add_vectors(P, intermediate_result_6, intermediate_result_7, nb_relations);
@@ -221,44 +266,48 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
 
     for (size_t i = 0 ; i < 2*block_size ; i++)
     {
-        if (!(mpz_cmp_ui(matrix[i], 0)))
+        if (!(mpz_cmp_ui(matrix[i], 0)) && mpz_cmp_ui(tmp_matrix[i], 0))
         {
             append(output, tmp_matrix[i]);
         }
     }
+    printf("%zu\n", d);
+    printf("kernel size: %lu\n", output->len);
     if (output->len == 0)
     {
-        block_lanczos(output, sparse_matrix, nb_relations, MIN(2*block_size, 8), index);
+        block_lanczos(output, sparse_matrix, nb_relations, MIN(2*block_size, 2), factor_base_size, index);
     }
+
+    free(Y);
+    free(X);
+    free(tmp);
+    free(tmp2);
+    free(tmp_intermediate);
+    free(tmp_indermediate2);
+    free(V0);
+    free(V);
+    free(P);
+    free(Z);
+    free(vAv);
+    free(vAAv);
+    free(W_inv);
+    free(c);
+    free(tmp_small);
+    free(tmp_small2);
+    free(tmp_small3);
+    free(intermediate_result_1);
+    free(intermediate_result_2);
+    free(intermediate_result_3);
+    free(intermediate_result_4);
+    free(intermediate_result_5);
+    free(intermediate_result_6);
+    free(intermediate_result_7);
+
+    for (size_t i = 0 ; i < 2*block_size ; i++) mpz_clear(matrix[i]);
+    free(matrix);
+
+    for (size_t i = 0 ; i < 2*block_size ; i++) mpz_clear(tmp_matrix[i]);
+    free(tmp_matrix);
+
     return;
-}
-
-void solve(mpz_t *matrix, mpz_t *kernel, size_t nb_relations, size_t matrix_len)
-{
-    size_t k = 0;
-
-    for (size_t i = 0 ; i < nb_relations ; i++)
-    {
-        size_t index;
-        for (size_t j = k ; j < matrix_len ; j++)
-        {
-            if (mpz_tstbit(matrix[j], nb_relations-i-1))
-            {
-                mpz_swap(matrix[j], matrix[k]);
-                mpz_swap(kernel[j], kernel[k]);
-                k++;
-                break;
-                index = j;
-            }
-        }
-
-        for (size_t j = index+1 ; j < matrix_len ; j++)
-        {
-            if (mpz_tstbit(matrix[j], nb_relations-i-1))
-            {
-                mpz_xor(matrix[j], matrix[j], matrix[k-1]);
-                mpz_xor(kernel[j], kernel[j], kernel[k-1]);
-            }
-        }
-    }
 }

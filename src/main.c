@@ -17,6 +17,7 @@
 #include "reduce_matrix.h"
 #include "gaussian_elimination.h"
 #include "wiedemann.h"
+#include "block_lanczos.h"
 #include "compute_sqrt.h"
 
 void count(FILE *logfile, dyn_array_classic matrix, unsigned long limit, unsigned long dim)
@@ -337,8 +338,8 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
             if (flag_update_minimal_poly) log_msg(logfile, "Minimal polynomial updated, kernel vector found");
             else log_msg(logfile, "Kernel vector found");
 
-            mpz_set_ui(x,1);
-            mpz_set_ui(y,1);
+            mpz_set_ui(x, 1);
+            mpz_set_ui(y, 1);
 
             build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, tmp_array);
 
@@ -733,7 +734,7 @@ int main()
     if (flag_gaussian_elimination)
     {
 
-        mpz_t x,y;
+        mpz_t x, y;
         mpz_inits(x, y, NULL);
 
         unsigned long base_size = primes.len + 1;
@@ -791,7 +792,7 @@ int main()
             }
         }
     }
-    
+
     dyn_array_classic bin_matrix, rel_weight;
     init_classic(&bin_matrix);
     init_classic(&rel_weight);
@@ -823,8 +824,53 @@ int main()
         compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
     }
 
+    mpz_t x, y;
+    mpz_inits(x, y, NULL);
 
-    
+    while (true)
+    {
+        dyn_array kernel_vectors;
+        init(&kernel_vectors);
 
+        block_lanczos(&kernel_vectors, bin_matrix, relations.len, 2, primes.len+1, len);
+
+        bool *kernel_vec = calloc(relations.len, sizeof(bool));
+
+        for (size_t i = 0 ; i < kernel_vectors.len ; i++)
+        {
+            convert_to_vec(kernel_vectors.start[i], relations.len, kernel_vec);
+
+            build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, kernel_vec);
+
+            mpz_sub(tmp, x, y);
+            mpz_add(tmp2, x, y);
+            mpz_gcd(tmp, tmp, N);
+            mpz_gcd(tmp2, tmp2, N);
+            char array1;
+            char array2;
+
+            gmp_printf("%Zd %Zd\n", tmp, tmp2);
+
+            if (mpz_cmp_ui(tmp, 1) != 0 && mpz_cmp(tmp, N) != 0)
+            {
+                if (mpz_probab_prime_p(tmp, 100) > 0)
+                {
+                    array1 = 'p';
+                } else {array1 = 'C';}
+
+                if (mpz_probab_prime_p(tmp2, 100) > 0)
+                {
+                    array2 = 'p';
+                } else {array2 = 'C';}
+
+                tm = *localtime(&(time_t){time(NULL)});
+                log_blank_line(logfile);
+                log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
+                return 1;
+            }
+        }
+
+        free_dyn_array(&kernel_vectors);
+    }
     if (logfile) fclose(logfile);
 }
