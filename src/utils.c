@@ -384,6 +384,31 @@ void sparse_multiply_transpose(const dyn_array_classic sparse_matrix, const size
     }
 }
 
+void dense_multiply_transpose(size_t *output, size_t *matrix, size_t *vector, size_t dim1, size_t dim2) // computes transpose(matrix) * vector
+{
+    for (size_t i = 0 ; i < dim2 ; i++)
+    {
+        for (size_t j = 0 ; j < dim1 ; j++)
+        {
+            output[i] ^= vector[j] * ((matrix[j]>>(dim2-i-1))&1);
+        }
+    }
+}
+
+void transpose_dense(mpz_t *output, size_t *matrix, size_t dim1, size_t dim2) // computes transpose(matrix)
+{
+    for (size_t i = 0 ; i < dim2 ; i++)
+    {
+        for (size_t j = 0 ; j < dim1 ; j++)
+        {
+            if ((matrix[j]>>(dim2-i-1))&1)
+            {
+                mpz_setbit(output[i], dim1-j-1);
+            }
+        }
+    }
+}
+
 void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp_poly;

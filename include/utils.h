@@ -39,6 +39,8 @@ void identity(size_t *output, const size_t N);
 void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t N);
 size_t* dense_multiply(const size_t *matrix_A, const size_t *matrix_B, const size_t len_A, const size_t len_B);
 void sparse_multiply_transpose(const dyn_array_classic sparse_matrix, const size_t *vector, size_t *output, const unsigned long limit);
+void dense_multiply_transpose(size_t *output, size_t *matrix, size_t *vector, size_t dim1, size_t dim2);
+void transpose_dense(mpz_t *output, size_t *matrix, size_t dim1, size_t dim2);
 
 // Wiedemann polynomial functions
 
