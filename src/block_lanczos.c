@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "structures.h"
 #include "utils.h"
@@ -107,13 +108,96 @@ void extract_columns(size_t *W_inv, size_t *d, size_t *T, size_t N)
     }
 }
 
-void block_lanczos(dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size)
+void block_lanczos(dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long index)
 {
     size_t *Y = calloc(nb_relations, sizeof(size_t));
 
     for (size_t i = 0 ; i < nb_relations ; i++)
     {
         Y[i] = rand()%((1<<block_size)-1);
+    }
+
+    size_t *X = calloc(nb_relations, sizeof(size_t));
+
+    size_t *tmp = calloc(nb_relations, sizeof(size_t));
+    size_t *tmp2 = calloc(nb_relations, sizeof(size_t));
+
+    size_t *V0 = calloc(nb_relations, sizeof(size_t));
+
+    multiply_sparse(sparse_matrix, nb_relations, index, Y, tmp);
+    sparse_multiply_transpose(sparse_matrix, tmp, V0, index);
+
+    size_t *P = calloc(nb_relations, sizeof(size_t));
+
+    size_t *V = calloc(nb_relations, sizeof(size_t));
+    memcpy(V, V0, nb_relations*sizeof(size_t));
+
+    size_t d = 1;
+    size_t neg_d;
+    size_t mask = (1<<block_size)-1;
+
+    size_t i = 0;
+
+    size_t *Z = calloc(nb_relations, sizeof(size_t));
+    size_t *vAv = calloc(block_size, sizeof(size_t));
+    size_t *vAAv = calloc(block_size, sizeof(size_t));
+
+    size_t *W_inv = calloc(block_size, sizeof(size_t));
+    size_t *c = calloc(block_size, sizeof(size_t));
+
+    size_t *tmp_small = calloc(block_size, sizeof(size_t));
+    size_t *tmp_small2 = calloc(block_size, sizeof(size_t));
+    size_t *tmp_small3 = calloc(block_size, sizeof(size_t));
+
+    size_t *intermediate_result_1 = calloc(nb_relations, sizeof(size_t));
+    size_t *intermediate_result_2 = calloc(nb_relations, sizeof(size_t));
+    size_t *intermediate_result_3 = calloc(nb_relations, sizeof(size_t));
+
+    size_t *intermediate_result_4 = calloc(block_size, sizeof(size_t));
+
+    size_t *intermediate_result_5 = calloc(nb_relations, sizeof(size_t));
+    size_t *intermediate_result_6 = calloc(nb_relations, sizeof(size_t));
+    size_t *intermediate_result_7 = calloc(nb_relations, sizeof(size_t));
+
+    while (d && i <= (double)sparse_matrix.len/((double)block_size - 0.764) + 10)
+    {
+        multiply_sparse(sparse_matrix, nb_relations, index, V, tmp);
+        sparse_multiply_transpose(sparse_matrix, tmp, Z, index);
+
+        dense_multiply_transpose(vAv, V, Z, nb_relations, block_size);
+        dense_multiply_transpose(vAAv, Z, Z, nb_relations, block_size);
+
+        extract_columns(W_inv, &d, vAv, block_size);
+
+        dense_multiply_transpose(tmp, V, V0, nb_relations, block_size);
+        tmp2 = dense_multiply(W_inv, tmp, block_size, block_size);
+        tmp = dense_multiply(V, tmp2, nb_relations, block_size);
+        add_vectors(tmp2, X, tmp, nb_relations);
+        memcpy(X, tmp2, nb_relations*sizeof(size_t));
+
+        neg_d = switch_indices(d, mask);
+
+        multiply_d(tmp_small, vAAv, d, block_size);
+        multiply_d(tmp_small2, vAv, neg_d, block_size);
+        add_vectors(tmp_small3, tmp_small, tmp_small2, block_size);
+        c = dense_multiply(W_inv, tmp_small3, block_size, block_size);
+
+        multiply_d(intermediate_result_1, Z, d, block_size);
+        multiply_d(intermediate_result_2, V, neg_d, block_size);
+        intermediate_result_3 = dense_multiply(V, c, nb_relations, block_size);
+        multiply_d(intermediate_result_4, vAv, d, block_size);
+        intermediate_result_5 = dense_multiply(P, intermediate_result_4, nb_relations, block_size);
+        intermediate_result_6 = dense_multiply(V, W_inv, nb_relations, block_size);
+        multiply_d(intermediate_result_7, P, neg_d, block_size);
+
+        add_vectors(P, intermediate_result_6, intermediate_result_7, nb_relations);
+
+        add_vectors(tmp, intermediate_result_1, intermediate_result_2, nb_relations);
+        add_vectors(tmp2, tmp, intermediate_result_3, nb_relations);
+        add_vectors(tmp, tmp2, intermediate_result_5, nb_relations);
+        memcpy(V, tmp, nb_relations*sizeof(size_t));
+
+        i++;
     }
 }
 

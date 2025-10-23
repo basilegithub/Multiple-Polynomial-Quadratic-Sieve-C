@@ -316,6 +316,30 @@ void multiply(const dyn_array_classic A, const unsigned long n, const unsigned l
     for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
 }
 
+void multiply_sparse(const dyn_array_classic A, const unsigned long n, const unsigned long index, const size_t b[n], size_t res[n])
+{
+    size_t * restrict tmp = calloc(n, sizeof(bool));
+    unsigned long i = 0;
+    unsigned char tmp2 = 0;
+
+    const unsigned long * restrict A_start = A.start;
+    const size_t * restrict B = b;
+    size_t * restrict RES = res;
+
+    for (unsigned long k = 0 ; k < A.len ; k++)
+    {
+        if (A_start[k] == index)
+        {
+            tmp[i] = tmp2;
+            i++;
+            tmp2 = 0;
+        }
+        else tmp2 ^= B[A_start[k]];
+    }
+    for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
+    for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
+}
+
 bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
 {
     const bool * restrict LBD = lbd;
@@ -329,7 +353,7 @@ bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
     return tmp;
 }
 
-void add_vectors(size_t *output, const size_t *vec_a, const size_t *vec_b, const size_t N)
+void add_vectors(size_t *output, const size_t * restrict vec_a, const size_t *restrict vec_b, const size_t N)
 {
     for (size_t i = 0 ; i < N ; i++)
     {
@@ -345,7 +369,7 @@ void identity(size_t *output, const size_t N)
     }
 }
 
-void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t N)
+void concatenate(size_t *output, const size_t * restrict matrix_A, const size_t *restrict matrix_B, const size_t N)
 {
     for (size_t i = 0 ; i < N ; i++)
     {

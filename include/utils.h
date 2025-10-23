@@ -33,6 +33,7 @@ bool fermat_primality(mpz_t n);
 // Linear algebra functions
 
 void multiply(dyn_array_classic A, unsigned long n, unsigned long index, bool b[n], bool res[n]);
+void multiply_sparse(const dyn_array_classic A, const unsigned long n, const unsigned long index, const size_t b[n], size_t res[n]);
 bool dot_prod(unsigned long n, bool lbd[n], bool x[n]);
 void add_vectors(size_t *output, const size_t *vec_a, const size_t *vec_b, const size_t N);
 void identity(size_t *output, const size_t N);
