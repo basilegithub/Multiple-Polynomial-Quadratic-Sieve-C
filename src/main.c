@@ -230,121 +230,58 @@ void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
     mpz_clears(last, last_log, NULL);
 }
 
+void convert_to_vec(mpz_t embedding, unsigned long relations_len, bool tmp_vec[relations_len])
+{
+    mpz_t tmp, tmp2;
+    mpz_inits(tmp, tmp2, NULL);
+    mpz_set_ui(tmp2, 1);
+
+    for (size_t i = 0 ; i < relations_len ; i++)
+    {
+        mpz_and(tmp, embedding, tmp2);
+        tmp_vec[relations_len-i-1] = (bool) mpz_get_ui(tmp);
+
+        mpz_div_2exp(embedding, embedding, 1);
+    }
+
+    mpz_clears(tmp, tmp2, NULL);
+}
+
 void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len, size_t block_size)
 {
     struct tm tm;
 
-    mpz_t x, y, poly, poly_res, poly_shift;
-    mpz_inits(x, y, poly_res, NULL);
-    mpz_init_set_ui(poly, 1);
-    mpz_init_set_ui(poly_shift,1);
+    mpz_t x, y, minimal_polynomial_estimation;
+    mpz_inits(x, y, NULL);
+    mpz_init_set_ui(minimal_polynomial_estimation, 1);
 
-    unsigned long tmp_long = 0;
     unsigned long degree = 0;
     unsigned long k;
 
-    int block_len;
+    size_t block_len;
 
-    if (block_size <= 8) block_len = (int)block_size;
-    else block_len = 8;
+    if (block_size <= 16) block_len = (int)block_size;
+    else block_len = 16;
 
-    bool null_space[relations.len];
-    bool flag_update_minimal_poly;
-    bool tmp_array[relations.len];
-    bool tmp_vec[relations.len];
-    bool flag;
+    bool *kernel_vec = calloc(relations.len, sizeof(bool));
 
     while (1)
     {
-        tm = *localtime(&(time_t){time(NULL)});
+        dyn_array kernel_vectors;
+        init(&kernel_vectors);
+
         log_msg(logfile, "new block");
 
-        for (size_t i = 0 ; i < relations.len ; i++)
+        wiedemann(&kernel_vectors, bin_matrix, minimal_polynomial_estimation, block_len, relations.len, len, degree);
+
+        for (size_t i = 0 ; i < kernel_vectors.len ; i++)
         {
-            null_space[i] = 0;
-            for (size_t j = 1 ; j < block_len ; j++)
-            {
-                null_space[i] += rand()%2;
-                null_space[i] <<= 1;
-            }
-            null_space[i] += rand()%2;
-        }
-
-        if (mpz_cmp_ui(poly, 1) > 0) poly_eval(bin_matrix, poly, relations.len, null_space, null_space, len);
-
-        for (size_t i = 0 ; i < block_len ; i++)
-        {
-            flag_update_minimal_poly = 1;
-
-            for (size_t j = 0 ; j < relations.len ; j++)
-            {
-                tmp_array[j] = (null_space[j]>>i)&1;
-                tmp_vec[j] = tmp_array[j];
-            }
-
-            if (tmp_long > 0)
-            {
-                k = 0;
-                flag = false;
-                for (size_t j = 0 ; j < relations.len && !flag ; j++)
-                {
-                    if (tmp_array[j]) flag = true;
-                }
-
-                while (k <= tmp_long && flag)
-                {
-                    for (size_t j = 0 ; j < relations.len ; j++) tmp_vec[j] = tmp_array[j];
-
-                    multiply(bin_matrix, relations.len, len, tmp_array, tmp_array);
-                    k++;
-                    flag = false;
-                    for (size_t j = 0 ; j < relations.len && !flag ; j++)
-                    {
-                        if (tmp_array[j]) flag = true;
-                    }
-                }
-
-                flag = true;
-                for (size_t j = 0 ; j < relations.len && flag ; j++)
-                {
-                    if (tmp_array[j]) flag = false;
-                }
-
-                if (flag) flag_update_minimal_poly = 0;
-
-                for (size_t j = 0 ; j < relations.len ; j++) tmp_array[j] = tmp_vec[j];
-            }
-
-            if (flag_update_minimal_poly)
-            {
-                wiedemann(bin_matrix, poly_res, relations.len, tmp_array, len, degree);
-                mpz_set(tmp, poly_res);
-                my_int_log2(tmp);
-                degree += mpz_get_ui(tmp);
-
-                while (mpz_even_p(poly_res))
-                {
-                    mpz_div_2exp(poly_res, poly_res, 1);
-                    tmp_long++;
-                    mpz_mul_2exp(poly_shift, poly_shift, 1);
-                }
-
-                poly_prod(poly, poly, poly_res);
-                poly_eval(bin_matrix, poly_res, relations.len, null_space, null_space, len);
-
-                for (size_t j = 0 ; j < relations.len ; j++) tmp_array[j] = (null_space[j]>>i)&1;
-
-                if (mpz_cmp_ui(poly_shift, 1) > 0) poly_eval(bin_matrix, poly_shift, relations.len, tmp_array, tmp_array, len);
-            }
-
-            tm = *localtime(&(time_t){time(NULL)});
-            if (flag_update_minimal_poly) log_msg(logfile, "Minimal polynomial updated, kernel vector found");
-            else log_msg(logfile, "Kernel vector found");
+            convert_to_vec(kernel_vectors.start[i], relations.len, kernel_vec);
 
             mpz_set_ui(x, 1);
             mpz_set_ui(y, 1);
 
-            build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, tmp_array);
+            build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, kernel_vec);
 
             mpz_sub(tmp, x, y);
             mpz_add(tmp2, x, y);
@@ -365,7 +302,6 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
                     array2 = 'p';
                 } else {array2 = 'C';}
 
-                tm = *localtime(&(time_t){time(NULL)});
                 log_blank_line(logfile);
                 log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
 
@@ -373,23 +309,6 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
             }
         }
     }
-}
-
-void convert_to_vec(mpz_t embedding, unsigned long relations_len, bool tmp_vec[relations_len])
-{
-    mpz_t tmp, tmp2;
-    mpz_inits(tmp, tmp2, NULL);
-    mpz_set_ui(tmp2, 1);
-
-    for (size_t i = 0 ; i < relations_len ; i++)
-    {
-        mpz_and(tmp, embedding, tmp2);
-        tmp_vec[relations_len-i-1] = (bool) mpz_get_ui(tmp);
-
-        mpz_div_2exp(embedding, embedding, 1);
-    }
-
-    mpz_clears(tmp, tmp2, NULL);
 }
 
 int main()

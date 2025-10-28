@@ -345,12 +345,12 @@ void multiply_sparse(const dyn_array_classic A, const unsigned long dim_out, con
     free(tmp);
 }
 
-bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
+size_t dot_prod(const unsigned long n, const bool lbd[n], const size_t x[n])
 {
     const bool * restrict LBD = lbd;
     const bool * restrict X = x;
 
-    bool tmp = 0;
+    size_t tmp = 0;
     for (unsigned long i = 0 ; i < n ; i++)
     {
         if (LBD[i]) tmp ^= X[i];

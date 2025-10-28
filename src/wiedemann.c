@@ -36,53 +36,82 @@ void poly_anul(mpz_t D, mpz_t B, unsigned long m)
     mpz_clears(A, C, E, Q, R, degB, NULL);
 }
 
-void wiedemann(dyn_array_classic A, mpz_t poly_res, unsigned long n, bool vec[n], unsigned long limit, unsigned long degree)
+void wiedemann(dyn_array *kernel_vectors, dyn_array_classic A, mpz_t poly_res, size_t block_size, unsigned long n, unsigned long limit, unsigned long degree)
 {
-    bool vector_tmp[n];
-    bool block[n];
+    // create a new block
+    size_t *block = calloc(n, sizeof(size_t));
 
-    memset(vector_tmp, 0, n * sizeof *vector_tmp);
-    memset(block, 0, n * sizeof *block);
-    
-    multiply(A, n, limit, vec, block);
-    mpz_t poly_product, sequence, annihilator_poly;
-    mpz_init_set_ui(poly_product, 1);
-    mpz_inits(sequence, annihilator_poly, NULL);
+    size_t tmp_block = calloc(n, sizeof(size_t));
+    size_t tmp_block2 = calloc(n, sizeof(size_t));
 
-    unsigned long d = degree;
-
-    bool lambda[n];
-    bool flag = true;
-    while (flag)
+    for (size_t i = 0 ; i < n ; i++)
     {
-        for (size_t i = 0 ; i < n ; i++)
+        for (size_t j = 0 ; j < block_size-1 ; j++)
         {
-            lambda[i] = rand()&1;
+            block[i] ^= rand()&1;
+            block[i] <<= 1;
         }
-        memcpy(vector_tmp, block, n * sizeof(bool));
+        block[i] ^= rand()&1;
+    }
 
-        mpz_set_ui(sequence, 0);
-        for (unsigned long i = 0 ; i < ((n-d)<<1) - 1 ; i++)
+    // create one lbd projection
+
+    bool *lambda = calloc(n, sizeof(bool));
+
+    for (size_t i = 0 ; i < n ; i++)
+    {
+        lambda[i] = rand()&1;
+    }
+
+    // compute the sequences
+
+    memcpy(tmp_block, block, n*sizeof(size_t));
+
+    mpz_t *sequences = calloc(block_size, sizeof(mpz_t));
+    for (size_t i = 0 ; i < block_size ; i++)
+    {
+        mpz_init_set_ui(sequences[i], 0);
+    }
+
+    size_t dot_prod_value;
+
+    for (size_t i = 0 ; i < (2*n-1) ; i++)
+    {
+        dot_prod_value = dot_prod(n, lambda, tmp_block);
+        for (size_t j = 0 ; j < block_size ; j++)
         {
-            mpz_add_ui(sequence,sequence, dot_prod(n, lambda, vector_tmp));
-            mpz_mul_2exp(sequence, sequence, 1);
-            multiply(A, n, limit, vector_tmp, vector_tmp);
+            mpz_add_ui(sequences[j], sequences[j], (dot_prod_value>>(block_size-j-1))&1);
+            mpz_mul_2exp(sequences[j], sequences[j], 1);
         }
-        mpz_add_ui(sequence, sequence, dot_prod(n, lambda, vector_tmp));
-        mpz_set_ui(annihilator_poly, 1);
+        multiply(A, n, limit, tmp_block, tmp_block2);
+        memcpy(tmp_block, tmp_block2, n*sizeof(size_t));
+    }
+    dot_prod_value = dot_prod(n, lambda, tmp_block);
+    for (size_t j = 0 ; j < block_size ; j++)
+    {
+        mpz_add_ui(sequences[j], sequences[j], (dot_prod_value>>(block_size-j-1))&1);
+    }
 
-        poly_anul(annihilator_poly, sequence, n-d);
-        poly_prod(poly_product, poly_product, annihilator_poly);
-        poly_eval(A, annihilator_poly, n, block, block, limit);
-        my_int_log2(annihilator_poly);
-        d += mpz_get_ui(annihilator_poly);
+    // compute the annealing polynomial of each sequence
 
-        flag = false;
-        for (size_t i = 0 ; i < n && !flag; i++)
+    mpz_t anneal_polynomial;
+    mpz_init(anneal_polynomial);
+
+    size_t deg;
+
+    for (size_t i = 0 ; i < block_size ; i++)
+    {
+        poly_anul(anneal_polynomial, sequences[i], n);
+        deg = mpz_sizeinbase(anneal_polynomial, 2)-1;
+
+        if (deg) // update the minimal polynomial
         {
-            if (block[i]) flag = true;
+
         }
     }
-    mpz_set(poly_res, poly_product);
-    mpz_clears(poly_product, sequence, annihilator_poly, NULL);
+
+    mpz_clear(anneal_polynomial);
+
+    // evaluate the whole block with the updated minimal polynomial
+    // use the usual strat to find the kernel vectors
 }
