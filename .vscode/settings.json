@@ -6,6 +6,8 @@
         "limits": "c",
         "stdbool.h": "c",
         "structures.h": "c",
-        "random": "c"
+        "random": "c",
+        "vector": "c",
+        "compare": "c"
     }
 }

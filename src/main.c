@@ -17,6 +17,7 @@
 #include "reduce_matrix.h"
 #include "gaussian_elimination.h"
 #include "wiedemann.h"
+#include "block_lanczos.h"
 #include "compute_sqrt.h"
 
 void count(FILE *logfile, dyn_array_classic matrix, unsigned long limit, unsigned long dim)
@@ -229,7 +230,7 @@ void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
     mpz_clears(last, last_log, NULL);
 }
 
-void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len)
+void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len, size_t block_size)
 {
     struct tm tm;
 
@@ -242,7 +243,10 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
     unsigned long degree = 0;
     unsigned long k;
 
-    int block_len = 8; // less or equal to 8 for bool to work
+    int block_len;
+
+    if (block_size <= 8) block_len = (int)block_size;
+    else block_len = 8;
 
     bool null_space[relations.len];
     bool flag_update_minimal_poly;
@@ -337,8 +341,8 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
             if (flag_update_minimal_poly) log_msg(logfile, "Minimal polynomial updated, kernel vector found");
             else log_msg(logfile, "Kernel vector found");
 
-            mpz_set_ui(x,1);
-            mpz_set_ui(y,1);
+            mpz_set_ui(x, 1);
+            mpz_set_ui(y, 1);
 
             build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, tmp_array);
 
@@ -400,8 +404,10 @@ int main()
     int nb_cpu_sieve;
     int flag_batch_smooth;
     int flag_gaussian_elimination;
+    int flag_block_lanczos;
+    size_t block_size;
 
-    parse_config(config_path, &nb_cpu_sieve, &flag_batch_smooth, &flag_gaussian_elimination);
+    parse_config(config_path, &nb_cpu_sieve, &flag_batch_smooth, &flag_gaussian_elimination, &flag_block_lanczos, &block_size);
 
     srand(time(NULL));
     mpz_t N, n, b, tmp, tmp2;
@@ -733,7 +739,7 @@ int main()
     if (flag_gaussian_elimination)
     {
 
-        mpz_t x,y;
+        mpz_t x, y;
         mpz_inits(x, y, NULL);
 
         unsigned long base_size = primes.len + 1;
@@ -786,42 +792,94 @@ int main()
                     tm = *localtime(&(time_t){time(NULL)});
                     log_blank_line(logfile);
                     log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
+                    if (logfile) fclose(logfile);
                     return 1;
                 }
             }
         }
     }
+
+    dyn_array_classic bin_matrix, rel_weight;
+    init_classic(&bin_matrix);
+    init_classic(&rel_weight);
+
+    unsigned long nonzero;
+    double density;
+    unsigned long nb_lines;
+
+    build_sparse_matrix(relations, &bin_matrix, &rel_weight, primes, &nonzero, &nb_lines, &density);
+
+    unsigned long len = relations.len;
+
+    tm = *localtime(&(time_t){time(NULL)});
+    log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
+
+    unsigned long merge_bound = 5;
+
+    reduce_matrix(&relations, &smooth_numbers, &bin_matrix, &rel_weight, N, len, merge_bound);
+
+    count(logfile, bin_matrix, len, relations.len);
+
+    log_blank_line(logfile);
+
+    bin_matrix.size = bin_matrix.len;
+    bin_matrix.start = realloc(bin_matrix.start, bin_matrix.len*sizeof(unsigned long));
+
+    if (!flag_block_lanczos)
+    {
+        compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len, block_size);
+    }
+
     else
     {
-        dyn_array_classic bin_matrix, rel_weight;
-        init_classic(&bin_matrix);
-        init_classic(&rel_weight);
+        mpz_t x, y;
+        mpz_inits(x, y, NULL);
 
-        unsigned long nonzero;
-        double density;
-        unsigned long nb_lines;
+        while (true)
+        {
+            dyn_array kernel_vectors;
+            init(&kernel_vectors);
 
-        build_sparse_matrix(relations, &bin_matrix, &rel_weight, primes, &nb_lines, &nonzero, &density);
+            block_lanczos(&kernel_vectors, bin_matrix, relations.len, block_size, len, logfile);
+            if (block_size < 16) block_size <<= 1;
 
-        unsigned long len = relations.len;
+            bool *kernel_vec = calloc(relations.len, sizeof(bool));
 
-        tm = *localtime(&(time_t){time(NULL)});
-        log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
+            for (size_t i = 0 ; i < kernel_vectors.len ; i++)
+            {
+                convert_to_vec(kernel_vectors.start[i], relations.len, kernel_vec);
 
-        unsigned long merge_bound = 5;
+                build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, kernel_vec);
 
-        reduce_matrix(&relations, &smooth_numbers, &bin_matrix, &rel_weight, N, len, merge_bound);
+                mpz_sub(tmp, x, y);
+                mpz_add(tmp2, x, y);
+                mpz_gcd(tmp, tmp, N);
+                mpz_gcd(tmp2, tmp2, N);
+                char array1;
+                char array2;
 
-        count(logfile, bin_matrix, len, relations.len);
+                if (mpz_cmp_ui(tmp, 1) != 0 && mpz_cmp(tmp, N) != 0)
+                {
+                    if (mpz_probab_prime_p(tmp, 100) > 0)
+                    {
+                        array1 = 'p';
+                    } else {array1 = 'C';}
 
-        log_blank_line(logfile);
+                    if (mpz_probab_prime_p(tmp2, 100) > 0)
+                    {
+                        array2 = 'p';
+                    } else {array2 = 'C';}
 
-        bin_matrix.size = bin_matrix.len;
-        bin_matrix.start = realloc(bin_matrix.start, bin_matrix.len*sizeof(unsigned long));
+                    tm = *localtime(&(time_t){time(NULL)});
+                    log_blank_line(logfile);
+                    log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
+                    return 1;
+                }
+            }
 
-        compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
+            free_dyn_array(&kernel_vectors);
+        }
     }
-    
 
     if (logfile) fclose(logfile);
 }

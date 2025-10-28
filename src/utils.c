@@ -1,6 +1,7 @@
 #include <gmp.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "structures.h"
 
@@ -314,6 +315,34 @@ void multiply(const dyn_array_classic A, const unsigned long n, const unsigned l
     }
     for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
     for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
+
+    free(tmp);
+}
+
+void multiply_sparse(const dyn_array_classic A, const unsigned long dim_out, const unsigned long index, const size_t *b, size_t *res)
+{
+    size_t * restrict tmp = calloc(dim_out, sizeof(size_t));
+    unsigned long i = 0;
+    size_t tmp2 = 0;
+
+    const unsigned long * restrict A_start = A.start;
+    const size_t * restrict B = b;
+    size_t * restrict RES = res;
+
+    for (unsigned long k = 0 ; k < A.len ; k++)
+    {
+        if (A_start[k] == index)
+        {
+            tmp[i] = tmp2;
+            i++;
+            tmp2 = 0;
+        }
+        else tmp2 ^= B[A_start[k]];
+    }
+    for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
+    for (unsigned long j = i ; j < dim_out ; j++) RES[j] = 0;
+
+    free(tmp);
 }
 
 bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
@@ -327,6 +356,93 @@ bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
         if (LBD[i]) tmp ^= X[i];
     }
     return tmp;
+}
+
+void add_vectors(size_t *output, const size_t * restrict vec_a, const size_t *restrict vec_b, const size_t N)
+{
+    for (size_t i = 0 ; i < N ; i++)
+    {
+        output[i] = vec_a[i] ^ vec_b[i];
+    }
+}
+
+void identity(size_t *output, const size_t N)
+{
+    for (size_t i = 0 ; i < N ; i++)
+    {
+        output[i] = (1<<(N-i-1));
+    }
+}
+
+void concatenate(size_t *output, const size_t * restrict matrix_A, const size_t *restrict matrix_B, const size_t N, const size_t dim_out)
+{
+    for (size_t i = 0 ; i < dim_out ; i++)
+    {
+        output[i] = ((size_t)matrix_A[i]<<N) | matrix_B[i];
+    }
+}
+
+void dense_multiply(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t len_A, const size_t len_B)
+{
+    memset(output, 0, len_A*sizeof(size_t));
+
+    size_t tmp;
+
+    for (size_t i = 0 ; i < len_A ; i++)
+    {
+        tmp = 0;
+        for (size_t j = 0 ; j < len_B ; j++)
+        {
+            tmp ^= matrix_B[j] * ((matrix_A[i] >> (len_B-j-1))&1);
+        }
+        output[i] = tmp;
+    }
+}
+
+void sparse_multiply_transpose(const dyn_array_classic sparse_matrix, const size_t *vector, size_t *output, const unsigned long limit, const unsigned long dim)
+{
+    memset(output, 0, dim * sizeof(size_t));
+
+    size_t row_index = 0;
+
+    for (size_t i = 0 ; i < sparse_matrix.len ; i++)
+    {
+        if (sparse_matrix.start[i] == limit) row_index++;
+        else
+        {
+            output[sparse_matrix.start[i]] ^= vector[row_index];
+        }
+    }
+}
+
+void dense_multiply_transpose(size_t *output, size_t *matrix, size_t *vector, size_t dim1, size_t dim2) // computes transpose(matrix) * vector
+{
+    memset(output, 0, dim2 * sizeof(size_t));
+
+    for (size_t i = 0 ; i < dim2 ; i++)
+    {
+        for (size_t j = 0 ; j < dim1 ; j++)
+        {
+            output[i] ^= vector[j] * ((matrix[j]>>(dim2-i-1))&1);
+        }
+    }
+}
+
+void transpose_dense(mpz_t *output, size_t *matrix, size_t dim1, size_t dim2) // computes transpose(matrix)
+{
+
+    for (size_t i = 0 ; i < dim2 ; i++)
+    {
+        mpz_set_ui(output[i], 0);
+
+        for (size_t j = 0 ; j < dim1 ; j++)
+        {
+            if ((matrix[j]>>(dim2-i-1))&1)
+            {
+                mpz_setbit(output[i], dim1-j-1);
+            }
+        }
+    }
 }
 
 void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
