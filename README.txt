@@ -16,7 +16,7 @@ Here are some detailed characteristics :
 - Double large prime variation used to collect relations
 - Batch smoothness and trial division tests available
 - 1 cpu or parallel sieving available
-- Wiedemann algorithm or gaussian elimination available for the linear algebra step
+- Block Lanczos, Wiedemann algorithm or gaussian elimination available for the linear algebra step
 
 ##### Sources #####
 
@@ -83,6 +83,6 @@ Here are some points I consider working on at some point:
 
 Here are the next steps:
 
-- I still have to implement one last feature : adding block Lanczos algorithm for the linear algebra.
+- Some final cleaning has to be done.
 
 - Finally, implement the GNFS algorithm in C.
