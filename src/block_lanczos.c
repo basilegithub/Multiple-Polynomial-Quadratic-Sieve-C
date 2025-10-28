@@ -10,6 +10,7 @@
 
 #include "structures.h"
 #include "utils.h"
+#include "logs.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
@@ -159,7 +160,7 @@ void solve(mpz_t *matrix, mpz_t *kernel, size_t nb_rows, size_t matrix_len)
     }
 }
 
-void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long index)
+void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long index, FILE *logfile)
 {
     size_t nb_rows = 0;
     for (size_t i = 0 ; i < sparse_matrix.len ; i++)
@@ -270,7 +271,7 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
         i++;
     }
 
-    printf("Lanczos halted after %zu iterations\n", i);
+    log_msg(logfile, "Lanczos halted after %zu iterations", i);
 
     add_vectors(tmp, X, Y, nb_relations);
     concatenate(tmp2, tmp, V, block_size, nb_relations);
@@ -338,10 +339,11 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
     for (size_t i = 0 ; i < 2*block_size ; i++) mpz_clear(tmp_matrix[i]);
     free(tmp_matrix);
 
-    printf("kernel size: %lu\n", output->len);
+    log_msg(logfile, "Kernel size: %lu", output->len);
+
     if (output->len == 0)
     {
-        block_lanczos(output, sparse_matrix, nb_relations, MIN(2*block_size, 16), index);
+        block_lanczos(output, sparse_matrix, nb_relations, MIN(2*block_size, 16), index, logfile);
     }
 
     return;

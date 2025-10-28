@@ -12,7 +12,7 @@ void trim(char *str)
         *end-- = '\0';
 }
 
-void parse_config(char* config_path, int* nb_cpu_sieve, int* flag_batch_smooth, int *flag_gaussian_elimination)
+void parse_config(char* config_path, int* nb_cpu_sieve, int* flag_batch_smooth, int *flag_gaussian_elimination, int *flag_block_lanczos, size_t *block_size)
 {
     FILE *file = fopen(config_path, "r");
     if (!file) {
@@ -40,6 +40,12 @@ void parse_config(char* config_path, int* nb_cpu_sieve, int* flag_batch_smooth, 
         }
         else if (strcmp(key, "flag_gaussian_elimination") == 0) {
             *flag_gaussian_elimination = atoi(value);
+        }
+        else if (strcmp(key, "flag_block_lanczos") == 0) {
+            *flag_block_lanczos = atoi(value);
+        }
+        else if (strcmp(key, "block_size") == 0) {
+            *block_size = atoi(value);
         }
     }
 

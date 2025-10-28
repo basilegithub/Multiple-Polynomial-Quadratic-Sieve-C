@@ -401,8 +401,10 @@ int main()
     int nb_cpu_sieve;
     int flag_batch_smooth;
     int flag_gaussian_elimination;
+    int flag_block_lanczos;
+    size_t block_size;
 
-    parse_config(config_path, &nb_cpu_sieve, &flag_batch_smooth, &flag_gaussian_elimination);
+    parse_config(config_path, &nb_cpu_sieve, &flag_batch_smooth, &flag_gaussian_elimination, &flag_block_lanczos, &block_size);
 
     srand(time(NULL));
     mpz_t N, n, b, tmp, tmp2;
@@ -787,6 +789,7 @@ int main()
                     tm = *localtime(&(time_t){time(NULL)});
                     log_blank_line(logfile);
                     log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
+                    if (logfile) fclose(logfile);
                     return 1;
                 }
             }
@@ -819,58 +822,61 @@ int main()
     bin_matrix.size = bin_matrix.len;
     bin_matrix.start = realloc(bin_matrix.start, bin_matrix.len*sizeof(unsigned long));
 
-    if (false)
+    if (!flag_block_lanczos)
     {
         compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
     }
 
-    mpz_t x, y;
-    mpz_inits(x, y, NULL);
-    size_t block_size = 16;
-
-    while (true)
+    else
     {
-        dyn_array kernel_vectors;
-        init(&kernel_vectors);
+        mpz_t x, y;
+        mpz_inits(x, y, NULL);
 
-        block_lanczos(&kernel_vectors, bin_matrix, relations.len, block_size, len);
-        if (block_size < 16) block_size <<= 1;
-
-        bool *kernel_vec = calloc(relations.len, sizeof(bool));
-
-        for (size_t i = 0 ; i < kernel_vectors.len ; i++)
+        while (true)
         {
-            convert_to_vec(kernel_vectors.start[i], relations.len, kernel_vec);
+            dyn_array kernel_vectors;
+            init(&kernel_vectors);
 
-            build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, kernel_vec);
+            block_lanczos(&kernel_vectors, bin_matrix, relations.len, block_size, len, logfile);
+            if (block_size < 16) block_size <<= 1;
 
-            mpz_sub(tmp, x, y);
-            mpz_add(tmp2, x, y);
-            mpz_gcd(tmp, tmp, N);
-            mpz_gcd(tmp2, tmp2, N);
-            char array1;
-            char array2;
+            bool *kernel_vec = calloc(relations.len, sizeof(bool));
 
-            if (mpz_cmp_ui(tmp, 1) != 0 && mpz_cmp(tmp, N) != 0)
+            for (size_t i = 0 ; i < kernel_vectors.len ; i++)
             {
-                if (mpz_probab_prime_p(tmp, 100) > 0)
-                {
-                    array1 = 'p';
-                } else {array1 = 'C';}
+                convert_to_vec(kernel_vectors.start[i], relations.len, kernel_vec);
 
-                if (mpz_probab_prime_p(tmp2, 100) > 0)
-                {
-                    array2 = 'p';
-                } else {array2 = 'C';}
+                build_sqrt(relations, smooth_numbers, primes, N, x, y, relations.len, kernel_vec);
 
-                tm = *localtime(&(time_t){time(NULL)});
-                log_blank_line(logfile);
-                log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
-                return 1;
+                mpz_sub(tmp, x, y);
+                mpz_add(tmp2, x, y);
+                mpz_gcd(tmp, tmp, N);
+                mpz_gcd(tmp2, tmp2, N);
+                char array1;
+                char array2;
+
+                if (mpz_cmp_ui(tmp, 1) != 0 && mpz_cmp(tmp, N) != 0)
+                {
+                    if (mpz_probab_prime_p(tmp, 100) > 0)
+                    {
+                        array1 = 'p';
+                    } else {array1 = 'C';}
+
+                    if (mpz_probab_prime_p(tmp2, 100) > 0)
+                    {
+                        array2 = 'p';
+                    } else {array2 = 'C';}
+
+                    tm = *localtime(&(time_t){time(NULL)});
+                    log_blank_line(logfile);
+                    log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
+                    return 1;
+                }
             }
-        }
 
-        free_dyn_array(&kernel_vectors);
+            free_dyn_array(&kernel_vectors);
+        }
     }
+    
     if (logfile) fclose(logfile);
 }
