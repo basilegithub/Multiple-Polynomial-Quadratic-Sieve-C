@@ -60,7 +60,7 @@ Here are the following parameters you can edit in the config file:
 
 - flag_block_lanczos : Only relevant if flag_gaussian_elimination is 0. If 0, Wiedemann algorithm is performed. Otherwise, block_lanczos is performed.
 
-- block_size : If Wiedemann of block lanczos algorithm is performed, sets the block size. Should be less of equal to 16.
+- block_size : If 0, Wiedemann or block lanczos algorithm is performed, sets the block size. Should be less of equal to 16.
 
 ##### General discussion #####
 
