@@ -374,11 +374,11 @@ void identity(size_t *output, const size_t N)
     }
 }
 
-void concatenate(size_t *output, const size_t * restrict matrix_A, const size_t *restrict matrix_B, const size_t N)
+void concatenate(size_t *output, const size_t * restrict matrix_A, const size_t *restrict matrix_B, const size_t N, const size_t dim_out)
 {
-    for (size_t i = 0 ; i < N ; i++)
+    for (size_t i = 0 ; i < dim_out ; i++)
     {
-        output[i] = (matrix_A[i]<<N) | matrix_B[i];
+        output[i] = ((size_t)matrix_A[i]<<N) | matrix_B[i];
     }
 }
 

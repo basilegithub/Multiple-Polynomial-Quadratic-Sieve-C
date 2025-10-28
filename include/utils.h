@@ -37,7 +37,7 @@ void multiply_sparse(const dyn_array_classic A, const unsigned long dim_out, con
 bool dot_prod(unsigned long n, bool lbd[n], bool x[n]);
 void add_vectors(size_t *output, const size_t *vec_a, const size_t *vec_b, const size_t N);
 void identity(size_t *output, const size_t N);
-void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t N);
+void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t N, const size_t dim_out);
 void dense_multiply(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t len_A, const size_t len_B);
 void sparse_multiply_transpose(const dyn_array_classic sparse_matrix, const size_t *vector, size_t *output, const unsigned long limit, const unsigned long dim);
 void dense_multiply_transpose(size_t *output, size_t *matrix, size_t *vector, size_t dim1, size_t dim2);

@@ -826,13 +826,15 @@ int main()
 
     mpz_t x, y;
     mpz_inits(x, y, NULL);
+    size_t block_size = 16;
 
     while (true)
     {
         dyn_array kernel_vectors;
         init(&kernel_vectors);
 
-        block_lanczos(&kernel_vectors, bin_matrix, relations.len, 8, primes.len+1, len);
+        block_lanczos(&kernel_vectors, bin_matrix, relations.len, block_size, len);
+        if (block_size < 16) block_size <<= 1;
 
         bool *kernel_vec = calloc(relations.len, sizeof(bool));
 
@@ -848,7 +850,7 @@ int main()
             mpz_gcd(tmp2, tmp2, N);
             char array1;
             char array2;
-            
+
             if (mpz_cmp_ui(tmp, 1) != 0 && mpz_cmp(tmp, N) != 0)
             {
                 if (mpz_probab_prime_p(tmp, 100) > 0)
@@ -871,29 +873,4 @@ int main()
         free_dyn_array(&kernel_vectors);
     }
     if (logfile) fclose(logfile);
-
-    // dyn_array kernel_vectors;
-    // init(&kernel_vectors);
-
-    // unsigned long len = 10;
-    // unsigned long relations_len = 3;
-    // unsigned long pl = 2;
-
-    // dyn_array_classic bin_matrix;
-    // init_classic(&bin_matrix);
-
-    // // append_classic(&bin_matrix, 0);
-    // append_classic(&bin_matrix, 1);
-    // append_classic(&bin_matrix, 2);
-    // append_classic(&bin_matrix, 10);
-    // append_classic(&bin_matrix, 0);
-    // append_classic(&bin_matrix, 1);
-    // // append_classic(&bin_matrix, 2);
-    // append_classic(&bin_matrix, 10);
-
-    // printf("hey\n");
-
-    // srand(time(NULL));
-
-    // block_lanczos(&kernel_vectors, bin_matrix, relations_len, 4, pl, len);
 }

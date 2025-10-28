@@ -111,7 +111,8 @@ void parallel_sieve(
                     tmp_array[i].x,
                     tmp_array[i].y,
                     tmp_array[i].small_p,
-                    tmp_array[i].big_p
+                    tmp_array[i].big_p,
+                    NULL
                 );
             }
 
