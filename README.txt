@@ -56,7 +56,11 @@ Here are the following parameters you can edit in the config file:
 
 - flag_batch_smooth : If 0, the trial division (naive) test is used. Else, the batch smoothness test is used. 
 
-- flag_gaussian_elimination : If 0, Widemann algorithm is performed. Otherwise, Gaussian elimination is performed.
+- flag_gaussian_elimination : If 0, Wiedemann of block lanczos algorithm is performed (according to flag_block_lanczos). Otherwise, Gaussian elimination is performed.
+
+- flag_block_lanczos : Only relevant if flag_gaussian_elimination is 0. If 0, Wiedemann algorithm is performed. Otherwise, block_lanczos is performed.
+
+- block_size : If Wiedemann of block lanczos algorithm is performed, sets the block size.
 
 ##### General discussion #####
 
