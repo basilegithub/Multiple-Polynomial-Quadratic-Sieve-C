@@ -230,7 +230,7 @@ void compute_logs(dyn_array_classic primes, mpz_t tmp, unsigned long* logs)
     mpz_clears(last, last_log, NULL);
 }
 
-void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len)
+void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len, size_t block_size)
 {
     struct tm tm;
 
@@ -243,7 +243,10 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
     unsigned long degree = 0;
     unsigned long k;
 
-    int block_len = 8; // less or equal to 8 for bool to work
+    int block_len;
+
+    if (block_size <= 8) block_len = (int)block_size;
+    else block_len = 8;
 
     bool null_space[relations.len];
     bool flag_update_minimal_poly;
@@ -824,7 +827,7 @@ int main()
 
     if (!flag_block_lanczos)
     {
-        compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len);
+        compute_factors(logfile, relations, smooth_numbers, bin_matrix, primes, N, tmp, tmp2, len, block_size);
     }
 
     else
@@ -877,6 +880,6 @@ int main()
             free_dyn_array(&kernel_vectors);
         }
     }
-    
+
     if (logfile) fclose(logfile);
 }

@@ -1,5 +1,5 @@
 nb_cpu_sieve=28
 flag_batch_smooth=0
 flag_gaussian_elimination=0
-flag_block_lanczos=1
+flag_block_lanczos=0
 block_size=4
