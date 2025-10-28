@@ -319,9 +319,9 @@ void multiply(const dyn_array_classic A, const unsigned long n, const unsigned l
     free(tmp);
 }
 
-void multiply_sparse(const dyn_array_classic A, const unsigned long n, const unsigned long index, const size_t b[n], size_t res[n])
+void multiply_sparse(const dyn_array_classic A, const unsigned long dim_out, const unsigned long index, const size_t *b, size_t *res)
 {
-    size_t * restrict tmp = calloc(n, sizeof(size_t));
+    size_t * restrict tmp = calloc(dim_out, sizeof(size_t));
     unsigned long i = 0;
     size_t tmp2 = 0;
 
@@ -340,7 +340,7 @@ void multiply_sparse(const dyn_array_classic A, const unsigned long n, const uns
         else tmp2 ^= B[A_start[k]];
     }
     for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
-    for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
+    for (unsigned long j = i ; j < dim_out ; j++) RES[j] = 0;
 
     free(tmp);
 }
@@ -393,7 +393,7 @@ void dense_multiply(size_t *output, const size_t *matrix_A, const size_t *matrix
         tmp = 0;
         for (size_t j = 0 ; j < len_B ; j++)
         {
-            tmp ^= matrix_B[j] & ((matrix_A[i] >> len_B-j-1)&1);
+            tmp ^= matrix_B[j] * ((matrix_A[i] >> (len_B-j-1))&1);
         }
         output[i] = tmp;
     }

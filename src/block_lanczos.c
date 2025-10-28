@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 #include "structures.h"
 #include "utils.h"
@@ -60,7 +61,7 @@ void extract_columns(size_t *W_inv, size_t *d, size_t *T, size_t N)
         {
             for (size_t k = 0 ; k < N ; k++)
             {
-                if (k != j)
+                if (k != j && ((M[k]>>(2*N-j-1))&1))
                 {
                     M[k] ^= M[j];
                 }
@@ -80,7 +81,7 @@ void extract_columns(size_t *W_inv, size_t *d, size_t *T, size_t N)
                 }
             }
 
-            if (!(M[j]>>(N-j-1))&1)
+            if (!((M[j]>>(N-j-1))&1))
             {
                 printf("you are fucked man\n\n\n");
             }
@@ -110,7 +111,7 @@ void extract_columns(size_t *W_inv, size_t *d, size_t *T, size_t N)
         *d |= (1<<(N-S[i]-1));
     }
 
-    printf("%zu\n", *d);
+    // printf("%zu\n", *d);
 
     free(M);
     free(ident);
@@ -154,12 +155,17 @@ void solve(mpz_t *matrix, mpz_t *kernel, size_t nb_relations, size_t matrix_len)
 
 void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb_relations, size_t block_size, unsigned long factor_base_size, unsigned long index)
 {
+    size_t nb_rows = 0;
+    for (size_t i = 0 ; i < sparse_matrix.len ; i++)
+    {
+        if (sparse_matrix.start[i] == index) nb_rows++;
+    }
 
     size_t *Y = calloc(nb_relations, sizeof(size_t));
 
     for (size_t i = 0 ; i < nb_relations ; i++)
     {
-        Y[i] = rand()%((1<<block_size)-1);
+        Y[i] = rand()%(((size_t)1<<block_size));
     }
 
     size_t *X = calloc(nb_relations, sizeof(size_t));
@@ -167,12 +173,11 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
     size_t *tmp = calloc(nb_relations, sizeof(size_t));
     size_t *tmp2 = calloc(nb_relations, sizeof(size_t));
 
-    size_t *tmp_intermediate = calloc(factor_base_size, sizeof(size_t));
-    size_t *tmp_indermediate2 = calloc(factor_base_size, sizeof(size_t));
+    size_t *tmp_intermediate = calloc(nb_rows, sizeof(size_t));
 
     size_t *V0 = calloc(nb_relations, sizeof(size_t));
 
-    multiply_sparse(sparse_matrix, factor_base_size, index, Y, tmp_intermediate);
+    multiply_sparse(sparse_matrix, nb_rows, index, Y, tmp_intermediate);
     sparse_multiply_transpose(sparse_matrix, tmp_intermediate, V0, index, nb_relations);
 
     size_t *P = calloc(nb_relations, sizeof(size_t));
@@ -182,7 +187,7 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
 
     size_t d = 1;
     size_t neg_d;
-    size_t mask = (1<<block_size)-1;
+    size_t mask = ((size_t)1<<block_size)-1;
 
     size_t i = 0;
 
@@ -207,9 +212,9 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
     size_t *intermediate_result_6 = calloc(nb_relations, sizeof(size_t));
     size_t *intermediate_result_7 = calloc(nb_relations, sizeof(size_t));
 
-    while (d && i <= (double)sparse_matrix.len/((double)block_size - 0.764) + 10)
+    while (d && i <= (double)nb_relations/((double)block_size - 0.764) + 10)
     {
-        multiply_sparse(sparse_matrix, factor_base_size, index, V, tmp_intermediate);
+        multiply_sparse(sparse_matrix, nb_rows, index, V, tmp_intermediate);
         sparse_multiply_transpose(sparse_matrix, tmp_intermediate, Z, index, nb_relations);
 
         dense_multiply_transpose(vAv, V, Z, nb_relations, block_size);
@@ -217,9 +222,11 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
 
         extract_columns(W_inv, &d, vAv, block_size);
 
-        dense_multiply_transpose(tmp, V, V0, nb_relations, block_size);
-        dense_multiply(tmp2, W_inv, tmp, block_size, block_size);
-        dense_multiply(tmp, V, tmp2, nb_relations, block_size);
+        dense_multiply_transpose(tmp_small, V, V0, nb_relations, block_size);
+
+        dense_multiply(tmp_small2, W_inv, tmp_small, block_size, block_size);
+
+        dense_multiply(tmp, V, tmp_small2, nb_relations, block_size);
         add_vectors(tmp2, X, tmp, nb_relations);
         memcpy(X, tmp2, nb_relations*sizeof(size_t));
 
@@ -230,13 +237,13 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
         add_vectors(tmp_small3, tmp_small, tmp_small2, block_size);
         dense_multiply(c, W_inv, tmp_small3, block_size, block_size);
 
-        multiply_d(intermediate_result_1, Z, d, block_size);
-        multiply_d(intermediate_result_2, V, neg_d, block_size);
+        multiply_d(intermediate_result_1, Z, d, nb_relations);
+        multiply_d(intermediate_result_2, V, neg_d, nb_relations);
         dense_multiply(intermediate_result_3, V, c, nb_relations, block_size);
         multiply_d(intermediate_result_4, vAv, d, block_size);
         dense_multiply(intermediate_result_5, P, intermediate_result_4, nb_relations, block_size);
         dense_multiply(intermediate_result_6, V, W_inv, nb_relations, block_size);
-        multiply_d(intermediate_result_7, P, neg_d, block_size);
+        multiply_d(intermediate_result_7, P, neg_d, nb_relations);
 
         add_vectors(P, intermediate_result_6, intermediate_result_7, nb_relations);
 
@@ -247,6 +254,8 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
 
         i++;
     }
+
+    printf("Lanczos halted after %zu iterations\n", i);
 
     add_vectors(tmp, X, Y, nb_relations);
     concatenate(tmp2, tmp, V, block_size);
@@ -271,19 +280,12 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
             append(output, tmp_matrix[i]);
         }
     }
-    printf("%zu\n", d);
-    printf("kernel size: %lu\n", output->len);
-    if (output->len == 0)
-    {
-        block_lanczos(output, sparse_matrix, nb_relations, MIN(2*block_size, 2), factor_base_size, index);
-    }
 
     free(Y);
     free(X);
     free(tmp);
     free(tmp2);
     free(tmp_intermediate);
-    free(tmp_indermediate2);
     free(V0);
     free(V);
     free(P);
@@ -308,6 +310,12 @@ void block_lanczos(dyn_array *output, dyn_array_classic sparse_matrix, size_t nb
 
     for (size_t i = 0 ; i < 2*block_size ; i++) mpz_clear(tmp_matrix[i]);
     free(tmp_matrix);
+
+    // printf("kernel size: %lu\n", output->len);
+    if (output->len == 0)
+    {
+        block_lanczos(output, sparse_matrix, nb_relations, MIN(2*block_size, 16), factor_base_size, index);
+    }
 
     return;
 }
