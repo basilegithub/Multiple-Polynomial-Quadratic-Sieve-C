@@ -293,7 +293,7 @@ bool fermat_primality(mpz_t n)
     return to_return;
 }
 
-void multiply(const dyn_array_classic A, const unsigned long n, const unsigned long index, const bool b[n], bool res[n])
+void multiply(const dyn_array_classic A, const unsigned long n, const unsigned long index, const bool *b, bool *res)
 {
     bool * restrict tmp = calloc(n, sizeof(bool));
     unsigned long i = 0;
@@ -312,6 +312,35 @@ void multiply(const dyn_array_classic A, const unsigned long n, const unsigned l
             tmp2 = 0;
         }
         else tmp2 ^= B[A_start[k]];
+    }
+    for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
+    for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
+
+    free(tmp);
+}
+
+void multiply_size_t(const dyn_array_classic A, const unsigned long n, const unsigned long index, size_t *b, size_t *res)
+{
+    size_t * tmp = calloc(n, sizeof(size_t));
+    unsigned long i = 0;
+    size_t tmp2 = 0;
+
+    const unsigned long * restrict A_start = A.start;
+    size_t *B = b;
+    size_t *RES = res;
+
+    for (unsigned long k = 0 ; k < A.len ; k++)
+    {
+        if (A_start[k] == index)
+        {
+            tmp[i] = tmp2;
+            i++;
+            tmp2 = 0;
+        }
+        else
+        {
+            tmp2 ^= B[A_start[k]];
+        }
     }
     for (unsigned long j = 0 ; j < i ; j++) RES[j] = tmp[j];
     for (unsigned long j = i ; j < n ; j++) RES[j] = 0;
@@ -345,12 +374,12 @@ void multiply_sparse(const dyn_array_classic A, const unsigned long dim_out, con
     free(tmp);
 }
 
-bool dot_prod(const unsigned long n, const bool lbd[n], const bool x[n])
+size_t dot_prod(const unsigned long n, const bool *lbd, const size_t *x)
 {
-    const bool * restrict LBD = lbd;
-    const bool * restrict X = x;
+    const bool * LBD = lbd;
+    const size_t * X = x;
 
-    bool tmp = 0;
+    size_t tmp = 0;
     for (unsigned long i = 0 ; i < n ; i++)
     {
         if (LBD[i]) tmp ^= X[i];
@@ -445,7 +474,7 @@ void transpose_dense(mpz_t *output, size_t *matrix, size_t dim1, size_t dim2) //
     }
 }
 
-void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
+void poly_prod(mpz_t res, mpz_t poly_a, const mpz_t poly_b)
 {
     mpz_t tmp_poly;
     mpz_init_set_ui(tmp_poly, 0);
@@ -469,46 +498,33 @@ void poly_prod(mpz_t res, const mpz_t poly_a, const mpz_t poly_b)
 
 void div_poly(mpz_t quotient, mpz_t remainder, const mpz_t poly_a, const mpz_t poly_b)
 {
-    mpz_t tmp, tmp2;
-    mpz_init_set(tmp, poly_a);
-    mpz_init_set(tmp2, poly_b);
-    my_int_log2(tmp);
-    my_int_log2(tmp2);
-    if (mpz_cmp(tmp, tmp2) < 0)
-    {
-        mpz_set(remainder, poly_a);
-        mpz_set_ui(quotient, 0);
-    }
-    else
-    {
-        mpz_set(remainder, poly_a);
-        mpz_set_ui(quotient, 0);
-        mpz_set(tmp, poly_a);
-        mpz_set(tmp2, poly_b);
-        my_int_log2(tmp);
-        my_int_log2(tmp2);
-        signed long dif = mpz_get_ui(tmp)-mpz_get_ui(tmp2);
+    mpz_t A, B, tmp;
+    mpz_inits(A, B, tmp, NULL);
 
-        for (signed long j = dif ; j > 0 ; j--)
-        {
-            if (mpz_cmp_ui(remainder, 0))
-            {
-                mpz_add_ui(quotient, quotient, 1);
-                mpz_mul_2exp(tmp, poly_b, j);
-                mpz_xor(remainder, remainder, tmp);
-            }
-            mpz_mul_2exp(quotient, quotient, 1);
-        }
+    mpz_set(A, poly_a);
+    mpz_set(B, poly_b);
 
-        mpz_set(tmp, remainder);
-        my_int_log2(tmp);
-        if (mpz_cmp_ui(remainder, 0) && mpz_cmp(tmp, tmp2) > -1)
-        {
-            mpz_add_ui(quotient, quotient, 1);
-            mpz_xor(remainder, remainder, poly_b);
-        }
+    mpz_set_ui(quotient, 0);
+    mpz_set(remainder, poly_a);
+
+    size_t degA = mpz_sizeinbase(A, 2)-1;
+    size_t degB = mpz_sizeinbase(B, 2)-1;
+
+    while (mpz_cmp_ui(remainder, 0) && degA >= degB)
+    {
+        size_t shift = degA - degB;
+
+        mpz_set_ui(tmp, 1);
+        mpz_mul_2exp(tmp, tmp, shift);
+        mpz_xor(quotient, quotient, tmp);
+
+        mpz_mul_2exp(tmp, B, shift);
+        mpz_xor(remainder, remainder, tmp);
+
+        degA = mpz_sizeinbase(remainder, 2)-1;
     }
-    mpz_clears(tmp, tmp2, NULL);
+
+    mpz_clears(A, B, tmp, NULL);
 }
 
 void poly_eval(dyn_array_classic A, mpz_t poly, unsigned long n, bool x[n], bool res[n], unsigned long limit)
@@ -536,4 +552,24 @@ void poly_eval(dyn_array_classic A, mpz_t poly, unsigned long n, bool x[n], bool
     }
     for (unsigned long i = 0 ; i < n ; i++) res[i] = tmp2[i];
     mpz_clear(tmp);
+}
+
+void gcd_poly(mpz_t res, mpz_t poly_a, mpz_t poly_b)
+{
+    mpz_t a, b, q, r;
+    mpz_inits(a, b, q, r, NULL);
+
+    mpz_set(a, poly_a);
+    mpz_set(b, poly_b);
+
+    while (mpz_cmp_ui(b, 0))
+    {
+        div_poly(q, r, a, b);
+        mpz_set(a, b);
+        mpz_set(b, r);
+    }
+
+    mpz_set(res, a);
+
+    mpz_clears(a, b, q, r, NULL);
 }

@@ -8,81 +8,230 @@
 
 void poly_anul(mpz_t D, mpz_t B, unsigned long m)
 {
-    mpz_t A, C, E, Q, R, degB;
+    mpz_t A, C, E, Q, R, tmp;
 
     mpz_init_set_ui(A, 1);
     mpz_mul_2exp(A, A, m<<1);
     mpz_init_set_ui(C, 0);
     mpz_set_ui(D, 1);
 
-    mpz_inits(degB, E, Q, R, NULL);
+    mpz_inits(tmp, E, Q, R, NULL);
 
-    mpz_set(degB, B);
-    my_int_log2(degB);
-
-    while (mpz_cmp_ui(degB, m) > -1)
+    while (mpz_sizeinbase(B, 2) > m)
     {
         div_poly(Q, R, A, B);
-        poly_prod(degB, Q, D);
-        mpz_xor(E, C, degB);
+        poly_prod(tmp, Q, D);
+        mpz_xor(E, C, tmp);
 
         mpz_set(C, D);
         mpz_set(D, E);
         mpz_set(A, B);
         mpz_set(B, R);
-        mpz_set(degB, B);
-        my_int_log2(degB);
     }
-    mpz_clears(A, C, E, Q, R, degB, NULL);
+    mpz_clears(A, C, E, Q, R, tmp, NULL);
 }
 
-void wiedemann(dyn_array_classic A, mpz_t poly_res, unsigned long n, bool vec[n], unsigned long limit, unsigned long degree)
+void find_kernel_vectors(dyn_array *kernel_vectors, dyn_array_classic A, mpz_t minimal_polynomial_estimate, size_t *block, size_t block_size, unsigned long n, unsigned long limit)
 {
-    bool vector_tmp[n];
-    bool block[n];
+    mpz_t tmp_poly;
+    mpz_init_set(tmp_poly, minimal_polynomial_estimate);
 
-    memset(vector_tmp, 0, n * sizeof *vector_tmp);
-    memset(block, 0, n * sizeof *block);
-    
-    multiply(A, n, limit, vec, block);
-    mpz_t poly_product, sequence, annihilator_poly;
-    mpz_init_set_ui(poly_product, 1);
-    mpz_inits(sequence, annihilator_poly, NULL);
-
-    unsigned long d = degree;
-
-    bool lambda[n];
-    bool flag = true;
-    while (flag)
+    size_t cpt = 2;
+    while (mpz_even_p(tmp_poly))
     {
-        for (size_t i = 0 ; i < n ; i++)
+        cpt++;
+        mpz_div_2exp(tmp_poly, tmp_poly, 1);
+    }
+
+    size_t *res = calloc(n ,sizeof(size_t));
+    // memcpy(res, block, n*sizeof(size_t));
+
+    size_t *tmp_array = calloc(n, sizeof(size_t));
+
+    size_t deg = mpz_sizeinbase(tmp_poly, 2)-1;
+
+    for (size_t i = 0 ; i < deg ; i++)
+    {
+        if (mpz_tstbit(tmp_poly, deg-i))
         {
-            lambda[i] = rand()&1;
+            for (size_t j = 0 ; j < n ; j++)
+            {
+                res[j] ^= block[j];
+            }
         }
-        memcpy(vector_tmp, block, n * sizeof(bool));
+        multiply_size_t(A, n, limit, res, tmp_array);
+        memcpy(res, tmp_array, n*sizeof(size_t));
+    }
 
-        mpz_set_ui(sequence, 0);
-        for (unsigned long i = 0 ; i < ((n-d)<<1) - 1 ; i++)
+    if (mpz_tstbit(tmp_poly, 0))
+    {
+        for (size_t j = 0 ; j < n ; j++)
         {
-            mpz_add_ui(sequence,sequence, dot_prod(n, lambda, vector_tmp));
-            mpz_mul_2exp(sequence, sequence, 1);
-            multiply(A, n, limit, vector_tmp, vector_tmp);
-        }
-        mpz_add_ui(sequence, sequence, dot_prod(n, lambda, vector_tmp));
-        mpz_set_ui(annihilator_poly, 1);
-
-        poly_anul(annihilator_poly, sequence, n-d);
-        poly_prod(poly_product, poly_product, annihilator_poly);
-        poly_eval(A, annihilator_poly, n, block, block, limit);
-        my_int_log2(annihilator_poly);
-        d += mpz_get_ui(annihilator_poly);
-
-        flag = false;
-        for (size_t i = 0 ; i < n && !flag; i++)
-        {
-            if (block[i]) flag = true;
+            res[j] ^= block[j];
         }
     }
-    mpz_set(poly_res, poly_product);
-    mpz_clears(poly_product, sequence, annihilator_poly, NULL);
+
+    // size_t *image = calloc(n, sizeof(size_t));
+    // multiply_size_t(A, n, limit, res, image); // image = A.res
+
+    size_t *indexes = calloc(block_size, sizeof(size_t));
+    for (size_t i = 0 ; i < block_size ; i++)
+    {
+        indexes[i] = i;
+    }
+
+    unsigned int indexes_size = block_size;
+
+    mpz_t kernel_vec;
+    mpz_init(kernel_vec);
+
+    for (size_t i = 0 ; i < cpt ; i++)
+    {
+        multiply_size_t(A, n, limit, res, tmp_array);
+
+        for (size_t j = 0 ; j < indexes_size ; j++)
+        {
+            bool flag_is_zero = true;
+            for (size_t k = 0 ; k < n ; k++)
+            {
+                if ((tmp_array[k]>>(block_size-indexes[j]-1))&1)
+                {
+                    flag_is_zero = false;
+                    break;
+                }
+            }
+
+            if (flag_is_zero)
+            {
+                mpz_set_ui(kernel_vec, 0);
+                for (size_t k = 0 ; k < n-1 ; k++)
+                {
+                    mpz_add_ui(kernel_vec, kernel_vec, (res[k]>>(block_size-indexes[j]-1))&1);
+                    mpz_mul_2exp(kernel_vec, kernel_vec, 1);
+                }
+                mpz_add_ui(kernel_vec, kernel_vec, (res[n-1]>>(block_size-indexes[j]-1))&1);
+                append(kernel_vectors, kernel_vec);
+
+                indexes[j] = indexes[--indexes_size];
+            }
+        }
+        memcpy(res, tmp_array, n*sizeof(size_t));
+    }
+
+    mpz_clears(kernel_vec, tmp_poly, NULL);
+
+    free(res);
+    free(tmp_array);
+    free(indexes);
+}
+
+void wiedemann(dyn_array *kernel_vectors, dyn_array_classic A, mpz_t minimal_polynomial_estimate, size_t block_size, unsigned long n, unsigned long limit)
+{
+    // create a new block
+    size_t *block = calloc(n, sizeof(size_t));
+
+    size_t *tmp_block = calloc(n, sizeof(size_t));
+    size_t *tmp_block2 = calloc(n, sizeof(size_t));
+
+    for (size_t i = 0 ; i < n ; i++)
+    {
+        for (size_t j = 0 ; j < block_size-1 ; j++)
+        {
+            block[i] ^= rand()&1;
+            block[i] <<= 1;
+        }
+        block[i] ^= rand()&1;
+    }
+
+    // create one lbd projection
+
+    bool *lambda = calloc(n, sizeof(bool));
+
+    for (size_t i = 0 ; i < n ; i++)
+    {
+        lambda[i] = rand()&1;
+    }
+
+    // compute the sequences
+
+    // multiply_size_t(A, n, limit, block, tmp_block);
+
+    memcpy(tmp_block, block, n*sizeof(size_t));
+
+    mpz_t *sequences = malloc(block_size*sizeof(mpz_t));
+
+    for (size_t i = 0 ; i < block_size ; i++)
+    {
+        mpz_init_set_ui(sequences[i], 0);
+    }
+
+    size_t dot_prod_value;
+
+    for (size_t i = 0 ; i < (2*n-1) ; i++)
+    {
+        dot_prod_value = dot_prod(n, lambda, tmp_block);
+
+        for (size_t j = 0 ; j < block_size ; j++)
+        {
+            size_t shifted = (dot_prod_value >> (block_size - j - 1));
+            size_t bit_result;
+            
+            // Force the AND operation via assembly
+            __asm__ ("and %1, %0" : "=r" (bit_result) : "r" (shifted), "0" (1));
+            // For some unkown reason it does not work in pure C
+            // It just does bit_result = shifted&1 ;
+            
+            mpz_add_ui(sequences[j], sequences[j], bit_result);
+            mpz_mul_2exp(sequences[j], sequences[j], 1);
+        }
+
+        multiply_size_t(A, n, limit, tmp_block, tmp_block2);
+        memcpy(tmp_block, tmp_block2, n*sizeof(size_t));
+    }
+
+    dot_prod_value = dot_prod(n, lambda, tmp_block);
+    for (size_t j = 0 ; j < block_size ; j++)
+    {
+        mpz_add_ui(sequences[j], sequences[j], (dot_prod_value>>(block_size-j-1))&1);
+    }
+
+    // compute the annealing polynomial of each sequence
+
+    mpz_t anneal_polynomial, gcd, q, r;
+    mpz_inits(anneal_polynomial, gcd, q, r, NULL);
+
+    size_t deg;
+
+    for (size_t i = 0 ; i < block_size ; i++)
+    {
+        mpz_set_ui(anneal_polynomial, 1);
+        mpz_set(r, sequences[i]);
+        poly_anul(anneal_polynomial, sequences[i], n);
+        deg = mpz_sizeinbase(anneal_polynomial, 2)-1;
+        
+
+        if (deg) // update the minimal polynomial
+        {
+            // compute gcd
+            gcd_poly(gcd, anneal_polynomial, minimal_polynomial_estimate);
+            // divide new poly by gcd
+            div_poly(q, r, anneal_polynomial, gcd);
+            // multiply estimate by the result
+            poly_prod(minimal_polynomial_estimate, minimal_polynomial_estimate, q);
+        }
+    }
+
+
+    mpz_clears(anneal_polynomial, gcd, q, r, NULL);
+
+    // use new estimate to find kernel vectors
+    find_kernel_vectors(kernel_vectors, A, minimal_polynomial_estimate, block, block_size, n, limit);
+
+    free(block);
+    free(tmp_block);
+    free(tmp_block2);
+    free(lambda);
+
+    for (size_t i = 0 ; i < block_size ; i++) mpz_clear(sequences[i]);
+    free(sequences);
 }

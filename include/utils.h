@@ -32,9 +32,10 @@ bool fermat_primality(mpz_t n);
 
 // Linear algebra functions
 
-void multiply(dyn_array_classic A, unsigned long n, unsigned long index, bool b[n], bool res[n]);
+void multiply(dyn_array_classic A, unsigned long n, unsigned long index, bool *b, bool *res);
+void multiply_size_t(const dyn_array_classic A, const unsigned long n, const unsigned long index, size_t *b, size_t *res);
 void multiply_sparse(const dyn_array_classic A, const unsigned long dim_out, const unsigned long index, const size_t *b, size_t *res);
-bool dot_prod(unsigned long n, bool lbd[n], bool x[n]);
+bool dot_prod(unsigned long n, bool *lbd, size_t *x);
 void add_vectors(size_t *output, const size_t *vec_a, const size_t *vec_b, const size_t N);
 void identity(size_t *output, const size_t N);
 void concatenate(size_t *output, const size_t *matrix_A, const size_t *matrix_B, const size_t N, const size_t dim_out);
@@ -48,5 +49,6 @@ void transpose_dense(mpz_t *output, size_t *matrix, size_t dim1, size_t dim2);
 void poly_prod(mpz_t res, mpz_t poly_a, mpz_t poly_b);
 void div_poly(mpz_t quotient, mpz_t remainder, mpz_t poly_a, mpz_t poly_b);
 void poly_eval(dyn_array_classic A, mpz_t poly, unsigned long n, bool x[n], bool res[n], unsigned long limit);
+void gcd_poly(mpz_t res, mpz_t poly_a, mpz_t poly_b);
 
 #endif // UTILS_H
