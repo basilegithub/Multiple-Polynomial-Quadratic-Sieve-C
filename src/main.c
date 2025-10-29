@@ -255,12 +255,11 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
     mpz_inits(x, y, NULL);
     mpz_init_set_ui(minimal_polynomial_estimation, 1);
 
-    unsigned long degree = 0;
     unsigned long k;
 
     size_t block_len;
 
-    if (block_size <= 16) block_len = (int)block_size;
+    if (block_size <= 16) block_len = block_size;
     else block_len = 16;
 
     bool *kernel_vec = calloc(relations.len, sizeof(bool));
@@ -272,7 +271,9 @@ void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_number
 
         log_msg(logfile, "new block");
 
-        wiedemann(&kernel_vectors, bin_matrix, minimal_polynomial_estimation, block_len, relations.len, len, degree);
+        wiedemann(&kernel_vectors, bin_matrix, minimal_polynomial_estimation, block_len, relations.len, len);
+
+        log_msg(logfile, "kernel_size = %lu", kernel_vectors.len);
 
         for (size_t i = 0 ; i < kernel_vectors.len ; i++)
         {
@@ -801,4 +802,35 @@ int main()
     }
 
     if (logfile) fclose(logfile);
+
+    // dyn_array_classic A;
+    // init_classic(&A);
+
+    // append_classic(&A, 0);
+    // append_classic(&A, 1);
+    // append_classic(&A, 2);
+    // append_classic(&A, 5);
+    // append_classic(&A, 0);
+    // append_classic(&A, 1);
+    // append_classic(&A, 2);
+    // append_classic(&A, 5);
+
+    // dyn_array kernel_vectors;
+    // init(&kernel_vectors);
+
+    // mpz_t poly;
+    // mpz_init_set_ui(poly, 1);
+
+    // size_t block_size = 4;
+
+    // unsigned long n = 3;
+
+    // unsigned long limit = 5;
+
+    // wiedemann(&kernel_vectors, A, poly, block_size, n, limit);
+
+    // for (unsigned long i = 0 ; i < kernel_vectors.len ; i++)
+    // {
+    //     gmp_printf("kernel vector %lu = %Zd\n", i, kernel_vectors.start[i]);
+    // }
 }
