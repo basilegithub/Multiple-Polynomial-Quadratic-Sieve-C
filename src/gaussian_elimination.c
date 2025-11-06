@@ -57,7 +57,7 @@ void gaussian_elimination(mpz_t *dense_matrix, mpz_t *res, unsigned long relatio
     mpz_clear(tmp);
 }
 
-bool row_is_zero(mpz_t *dense_matrix, size_t row_index, unsigned long relations_len, unsigned long base_size)
+bool row_is_zero(mpz_t *dense_matrix, size_t row_index)
 {
     return ((bool) !mpz_cmp_ui(dense_matrix[row_index], 0));
 }

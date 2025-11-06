@@ -12,7 +12,6 @@ void sieve(
     dyn_array_classic *locations,
     dyn_array_small *sieve,
     mpz_t n,
-    mpz_t poly_a,
     mpz_t poly_b,
     mpz_t poly_c,
     unsigned long *logs,
@@ -30,8 +29,6 @@ void sieve(
     bool excluded;
 
     unsigned long root, log_weight, p;
-    unsigned long r;
-    unsigned long b;
 
     mpz_mul_2exp(inv_2b_mod_n, poly_b, 1);
     mpz_invert(inv_2b_mod_n, inv_2b_mod_n, n);

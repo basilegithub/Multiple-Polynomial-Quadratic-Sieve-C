@@ -14,7 +14,6 @@ void sieve(
     dyn_array_classic *locations,
     dyn_array_small *sieve,
     mpz_t n,
-    mpz_t poly_a,
     mpz_t poly_b,
     mpz_t poly_c,
     unsigned long *logs,

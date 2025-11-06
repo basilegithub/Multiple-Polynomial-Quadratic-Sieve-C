@@ -32,7 +32,6 @@ void count(FILE *logfile, dyn_array_classic matrix, unsigned long limit, unsigne
     }
 
     double density = (double) nonzero/nb_lines;
-    struct tm tm = *localtime(&(time_t){time(NULL)});
     log_msg(logfile, "matrix reduced to %lux%lu ; %lu nonzero values, density = %.2f", dim, nb_lines, nonzero, density);
 }
 
@@ -55,7 +54,7 @@ void initialize_1(gmp_randstate_t state, mpf_t ln10, mpf_t ln2, mpf_t e)
 unsigned long compute_best_mult(mpf_t best_time, mpf_t work, mpf_t time1, mpf_t time2, mpf_t e, mpf_t ln2, mpf_t tmpf, mpf_t tmpf2, mpz_t N, mpz_t n, mpz_t tmp, mpz_t tmp2, dyn_array_classic tmp_primes)
 {
     int res;
-    unsigned long best_mult;
+    unsigned long best_mult = 1;
 
     for (unsigned long k = 1 ; k < 40 ; k++)
     {
@@ -249,13 +248,9 @@ void convert_to_vec(mpz_t embedding, unsigned long relations_len, bool tmp_vec[r
 
 void compute_factors(FILE *logfile, dyn_array relations, dyn_array smooth_numbers, dyn_array_classic bin_matrix, dyn_array_classic primes, mpz_t N, mpz_t tmp, mpz_t tmp2, unsigned long len, size_t block_size)
 {
-    struct tm tm;
-
     mpz_t x, y, minimal_polynomial_estimation;
     mpz_inits(x, y, NULL);
     mpz_init_set_ui(minimal_polynomial_estimation, 1);
-
-    unsigned long k;
 
     size_t block_len;
 
@@ -411,7 +406,6 @@ int main()
 
     compute_factor_base(&primes, &roots, B, &prod_primes, n, tmp2, state);
 
-    struct tm tm = *localtime(&(time_t){time(NULL)});
     log_msg(logfile, "Factor base created : %lu primes", primes.len);
     log_msg(logfile, "p_max = %lu", primes.start[primes.len-1]);
 
@@ -467,11 +461,6 @@ int main()
         log_gmp_msg(logfile, "Large prime bound 1 = %Zd = %Zd*p_max", cst, multiplier);
         log_gmp_msg(logfile, "Large prime bound 2 = %Zd = %Zd*p_max^2", cst2, multiplier);
         log_blank_line(logfile);
-
-        mpz_t tmp_bin;
-        mpz_init(tmp_bin);
-
-        unsigned long tmp_a, tmp_b, tmplol;
 
         mpf_t target;
         mpf_init(target);
@@ -537,7 +526,6 @@ int main()
                         prod_primes,
                         cst,
                         cst2,
-                        tmp_bin,
                         target,
                         ln2,
                         ln10,
@@ -558,9 +546,6 @@ int main()
                         prime_start,
                         smooth_bound,
                         prime,
-                        tmp_a,
-                        tmp_b,
-                        tmplol,
                         time_diff,
                         objective,
                         seconds,
@@ -585,7 +570,6 @@ int main()
                         prod_primes,
                         cst,
                         cst2,
-                        tmp_bin,
                         target,
                         ln2,
                         ln10,
@@ -596,7 +580,6 @@ int main()
                         bounds,
                         logs,
                         best_mult,
-                        time_seed,
                         sieve_len,
                         batch_size,
                         half,
@@ -606,9 +589,6 @@ int main()
                         prime_start,
                         smooth_bound,
                         prime,
-                        tmp_a,
-                        tmp_b,
-                        tmplol,
                         time_diff,
                         objective,
                         seconds,
@@ -649,7 +629,6 @@ int main()
 	mpz_init(tmp);
 
 	mpz_clear(prod_primes);
-	tm = *localtime(&(time_t){time(NULL)});
 
     unsigned long relations_len = relations.len;
     reduce_relations(&relations, &smooth_numbers, &primes,n);
@@ -662,7 +641,6 @@ int main()
         mpz_t x, y;
         mpz_inits(x, y, NULL);
 
-        unsigned long base_size = primes.len + 1;
         unsigned long relations_len = relations.len;
 
         mpz_t *dense_matrix = calloc(relations_len, sizeof(mpz_t));
@@ -673,7 +651,7 @@ int main()
 
         bool tmp_vec[relations_len];
 
-        build_dense_matrix(relations, primes, dense_matrix, relations.len, primes.len+1);
+        build_dense_matrix(relations, primes, dense_matrix, relations.len);
 
         log_msg(logfile, "matrix built %lux%lu ; performing gaussian elimination...", relations.len, primes.len+1);
 
@@ -681,7 +659,7 @@ int main()
 
         for (unsigned long i = 0 ; i < relations.len ; i++)
         {
-            if (row_is_zero(dense_matrix, i, relations.len, primes.len+1))
+            if (row_is_zero(dense_matrix, i))
             {
                 mpz_set_ui(x, 1);
                 mpz_set_ui(y, 1);
@@ -709,7 +687,6 @@ int main()
                         array2 = 'p';
                     } else {array2 = 'C';}
 
-                    tm = *localtime(&(time_t){time(NULL)});
                     log_blank_line(logfile);
                     log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
                     if (logfile) fclose(logfile);
@@ -731,7 +708,6 @@ int main()
 
     unsigned long len = relations.len;
 
-    tm = *localtime(&(time_t){time(NULL)});
     log_msg(logfile, "matrix built %lux%lu ; %lu nonzero values, density = %.2f", len, nb_lines, nonzero, density);
 
     unsigned long merge_bound = 5;
@@ -790,7 +766,6 @@ int main()
                         array2 = 'p';
                     } else {array2 = 'C';}
 
-                    tm = *localtime(&(time_t){time(NULL)});
                     log_blank_line(logfile);
                     log_gmp_msg(logfile, "%Zd = %Zd (%c) x %Zd (%c)", N, tmp, array1, tmp2, array2);
                     return 1;
