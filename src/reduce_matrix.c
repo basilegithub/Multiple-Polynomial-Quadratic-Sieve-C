@@ -332,10 +332,10 @@ void reduce_matrix(
 
     // weights are sorted
     size_t i, j;
-    unsigned long tmp4, k;
+    unsigned long k;
     unsigned long nb_lines;
     bool changed = true;
-    unsigned long pivot,remain;
+    unsigned long pivot;
 
     while(changed)
     {

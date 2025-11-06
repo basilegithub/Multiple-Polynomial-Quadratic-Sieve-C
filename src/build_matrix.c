@@ -55,7 +55,7 @@ void build_sparse_matrix(dyn_array relations, dyn_array_classic* matrix, dyn_arr
     mpz_clears(current_prime, tmp_mpz, NULL);
 }
 
-void build_dense_matrix(dyn_array relations, dyn_array_classic factor_base, mpz_t *dense_matrix, unsigned long relations_len, unsigned long base_size)
+void build_dense_matrix(dyn_array relations, dyn_array_classic factor_base, mpz_t *dense_matrix, unsigned long relations_len)
 {
 
     mpz_t accumulator, current_prime, tmp_mpz;

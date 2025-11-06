@@ -14,7 +14,6 @@ void create_polynomial(
     dyn_array_classic* way_to_root,
     dyn_array_classic* tmp_where,
     mpz_t a,
-    mpz_t n,
     mpf_t target,
     mpf_t ln2,
     mpf_t ln10,

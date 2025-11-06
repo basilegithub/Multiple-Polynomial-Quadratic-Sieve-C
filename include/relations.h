@@ -43,14 +43,10 @@ void handle_relations(
     dyn_array coefficient,
     mpz_t n,
     mpz_t value,
-    mpz_t tmp_bin,
     unsigned long* full_found,
     unsigned long* partial_found,
     unsigned long* indexp,
     unsigned long k,
-    unsigned long tmp_a,
-    unsigned long tmp_b,
-    unsigned long tmplol,
     int* need_append
 );
 
