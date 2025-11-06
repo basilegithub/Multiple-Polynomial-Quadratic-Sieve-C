@@ -87,6 +87,4 @@ Here are some points I consider working on at some point:
 
 Here are the next steps:
 
-- Some final cleaning has to be done.
-
-- Finally, implement the GNFS algorithm in C.
+- Implement the GNFS algorithm in C.
