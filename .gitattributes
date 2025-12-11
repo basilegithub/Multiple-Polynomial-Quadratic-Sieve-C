@@ -1,1 +1,1 @@
-lib/gmp/** linguist-vendored
+lib/gmp/** linguist-detectable=false
